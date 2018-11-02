@@ -76,7 +76,9 @@ defmodule Telemetry.Metrics do
   of the options common to all metric types:
 
   * `:name` - the metric name. Defaults to event name given as first argument;
-  * `:tag_keys` - metadata keys by which aggregations will be broken down. Defaults to an empty
+  * `:tags_fun` - function called on every event, converting metadata to tags. Defaults to `nil`,
+    which means that all, raw metadata should be treated as tags;
+  * `:tag_keys` - tag keys by which aggregations will be broken down. Defaults to an empty
     list;
   * `:description` - human-readable description of the metric. Might be used by reporters for
     documentation purposes. Defaults to empty string;
@@ -120,6 +122,7 @@ defmodule Telemetry.Metrics do
 
   @type metric_name :: [atom(), ...]
   @type metric_type :: :counter | :sum | :last_value | :distribution
+  @type tags_fun :: (Telemetry.event_metadata() -> %{tag_key => term()})
   @type tag_key :: atom()
   @type description :: String.t()
   @type unit :: atom()
@@ -128,6 +131,7 @@ defmodule Telemetry.Metrics do
   @type last_value_options :: [metric_option()]
   @type metric_option ::
           {:name, metric_name()}
+          | {:tags_fun, tags_fun() | nil}
           | {:tag_keys, [tag_key()]}
           | {:description, description()}
           | {:unit, unit()}
@@ -141,12 +145,13 @@ defmodule Telemetry.Metrics do
 
     alias Telemetry.Metrics
 
-    defstruct [:name, :type, :event_name, :tag_keys, :description, :unit]
+    defstruct [:name, :type, :event_name, :tags_fun, :tag_keys, :description, :unit]
 
     @type t :: %__MODULE__{
             name: Metrics.metric_name(),
             type: Metrics.metric_type(),
             event_name: Telemetry.event_name(),
+            tags_fun: Telemetry.Metrics.tags_fun() | nil,
             tag_keys: [Metrics.tag_key()],
             description: Metrics.description(),
             unit: Metrics.unit()
@@ -171,6 +176,7 @@ defmodule Telemetry.Metrics do
       name: Keyword.fetch!(options, :name),
       type: :counter,
       event_name: event_name,
+      tags_fun: Keyword.fetch!(options, :tags_fun),
       tag_keys: Keyword.fetch!(options, :tag_keys),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
@@ -193,6 +199,7 @@ defmodule Telemetry.Metrics do
       name: Keyword.fetch!(options, :name),
       type: :sum,
       event_name: event_name,
+      tags_fun: Keyword.fetch!(options, :tags_fun),
       tag_keys: Keyword.fetch!(options, :tag_keys),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
@@ -215,6 +222,7 @@ defmodule Telemetry.Metrics do
       name: Keyword.fetch!(options, :name),
       type: :last_value,
       event_name: event_name,
+      tags_fun: Keyword.fetch!(options, :tags_fun),
       tag_keys: Keyword.fetch!(options, :tag_keys),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
@@ -240,6 +248,7 @@ defmodule Telemetry.Metrics do
   defp default_metric_options(event_name) do
     [
       name: event_name,
+      tags_fun: nil,
       tag_keys: [],
       description: "",
       unit: :unit
@@ -249,11 +258,13 @@ defmodule Telemetry.Metrics do
   @spec validate_metric_options!([metric_option()]) :: :ok | no_return()
   defp validate_metric_options!(options) do
     metric_name = Keyword.fetch!(options, :name)
+    tags_fun = Keyword.fetch!(options, :tags_fun)
     tag_keys = Keyword.fetch!(options, :tag_keys)
     description = Keyword.fetch!(options, :description)
     unit = Keyword.fetch!(options, :unit)
 
     validate_metric_name!(metric_name)
+    validate_tags_fun!(tags_fun)
     validate_tag_keys!(tag_keys)
     validate_description!(description)
     validate_unit!(unit)
@@ -272,6 +283,26 @@ defmodule Telemetry.Metrics do
   defp validate_metric_name!(term) do
     raise ArgumentError,
           "Expected metric name to be a non empty list of atoms, got: #{inspect(term)}"
+  end
+
+  @spec validate_tags_fun!(term()) :: :ok | no_return()
+  defp validate_tags_fun!(fun) when is_function(fun, 1) do
+    :ok
+  end
+
+  defp validate_tags_fun!(fun) when is_function(fun) do
+    {:arity, arity} = :erlang.fun_info(fun, :arity)
+
+    raise ArgumentError,
+          "Expected tags fun to be a one-argument function, but the arity is #{arity}"
+  end
+
+  defp validate_tags_fun!(nil) do
+    :ok
+  end
+
+  defp validate_tags_fun!(term) do
+    raise ArgumentError, "Expected tags fun to be a function or nil, got: #{inspect(term)}"
   end
 
   @spec validate_tag_keys!(term()) :: :ok | no_return()
