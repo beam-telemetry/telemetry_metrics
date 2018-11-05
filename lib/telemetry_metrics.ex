@@ -170,8 +170,8 @@ defmodule Telemetry.Metrics do
   @spec counter(Telemetry.event_name(), counter_options()) :: Metric.t()
   def counter(event_name, options) do
     validate_event_name!(event_name)
-    options = Keyword.merge(default_metric_options(event_name), options)
     validate_metric_options!(options)
+    options = Keyword.merge(default_metric_options(event_name), options)
 
     %Metric{
       name: Keyword.fetch!(options, :name),
@@ -193,8 +193,8 @@ defmodule Telemetry.Metrics do
   @spec sum(Telemetry.event_name(), sum_options()) :: Metric.t()
   def sum(event_name, options) do
     validate_event_name!(event_name)
-    options = Keyword.merge(default_metric_options(event_name), options)
     validate_metric_options!(options)
+    options = Keyword.merge(default_metric_options(event_name), options)
 
     %Metric{
       name: Keyword.fetch!(options, :name),
@@ -216,8 +216,8 @@ defmodule Telemetry.Metrics do
   @spec last_value(Telemetry.event_name(), last_value_options()) :: Metric.t()
   def last_value(event_name, options) do
     validate_event_name!(event_name)
-    options = Keyword.merge(default_metric_options(event_name), options)
     validate_metric_options!(options)
+    options = Keyword.merge(default_metric_options(event_name), options)
 
     %Metric{
       name: Keyword.fetch!(options, :name),
@@ -258,17 +258,11 @@ defmodule Telemetry.Metrics do
 
   @spec validate_metric_options!([metric_option()]) :: :ok | no_return()
   defp validate_metric_options!(options) do
-    metric_name = Keyword.fetch!(options, :name)
-    tags_fun = Keyword.fetch!(options, :tags_fun)
-    tag_keys = Keyword.fetch!(options, :tag_keys)
-    description = Keyword.fetch!(options, :description)
-    unit = Keyword.fetch!(options, :unit)
-
-    validate_metric_name!(metric_name)
-    validate_tags_fun!(tags_fun)
-    validate_tag_keys!(tag_keys)
-    validate_description!(description)
-    validate_unit!(unit)
+    if metric_name = Keyword.get(options, :name), do: validate_metric_name!(metric_name)
+    if tags_fun = Keyword.get(options, :tags_fun), do: validate_tags_fun!(tags_fun)
+    if tag_keys = Keyword.get(options, :tag_keys), do: validate_tag_keys!(tag_keys)
+    if description = Keyword.get(options, :description), do: validate_description!(description)
+    if unit = Keyword.get(options, :unit), do: validate_unit!(unit)
   end
 
   @spec validate_metric_name!(term()) :: :ok | no_return()
