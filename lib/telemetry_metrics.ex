@@ -96,7 +96,7 @@ defmodule Telemetry.Metrics do
 
   The design proposed by `Telemetry.Metrics` might look controversial - unlike most of the libraries
   available on the BEAM, it doesn't aggregate metrics itself, it merely defines what users should
-  expect when using the reporters. There are two arguments for this solution. However,
+  expect when using the reporters. There are two arguments for this solution.
   if `Telemetry.Metrics` would aggregate metrics, the way those aggregations work would be imposed
   on the system where the metrics are published to. For example, counters in StatsD are reset on
   every flush and can be decremented, whereas counters in Prometheus are monotonically increasing.
