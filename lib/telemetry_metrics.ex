@@ -104,9 +104,10 @@ defmodule Telemetry.Metrics do
   operator, expects to see when using the metric of particular type. This implies that in most
   cases aggregated metrics won't be visible inside the BEAM, but in exchange aggregations can be
   implemented in a way that makes most sense for particular system. Finally, one could also
-  implement an in-VM "reporter" which would aggregate the metrics and expose them inside the BEAM;
+  implement an in-VM "reporter" which would aggregate the metrics and expose them inside the BEAM.
   When there is a need to swap the reporters, and if both reporters are following the metric types
-  specification, then the end result of aggregation
+  specification, then the end result of aggregation is the same, regardless of the backend system
+  in use.
 
   ### Requirements for reporters
 
