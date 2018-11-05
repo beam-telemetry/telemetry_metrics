@@ -63,7 +63,7 @@ defmodule Telemetry.MetricsTest do
         assert event_name == metric.name
         assert nil == metric.tags_fun
         assert [] == metric.tag_keys
-        assert "" == metric.description
+        assert nil == metric.description
         assert :unit == metric.unit
       end
 

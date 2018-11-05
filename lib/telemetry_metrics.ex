@@ -81,7 +81,7 @@ defmodule Telemetry.Metrics do
   * `:tag_keys` - tag keys by which aggregations will be broken down. Defaults to an empty
     list;
   * `:description` - human-readable description of the metric. Might be used by reporters for
-    documentation purposes. Defaults to empty string;
+    documentation purposes. Defaults to `nil`;
   * `:unit` - the unit of event values. Might be used by reporters for documentation purposes.
     Defaults to `:unit`.
 
@@ -125,7 +125,7 @@ defmodule Telemetry.Metrics do
   @type metric_type :: :counter | :sum | :last_value | :distribution
   @type tags_fun :: (Telemetry.event_metadata() -> %{tag_key => term()})
   @type tag_key :: atom()
-  @type description :: String.t()
+  @type description :: nil | String.t()
   @type unit :: atom()
   @type counter_options :: [metric_option()]
   @type sum_options :: [metric_option()]
@@ -251,7 +251,7 @@ defmodule Telemetry.Metrics do
       name: event_name,
       tags_fun: nil,
       tag_keys: [],
-      description: "",
+      description: nil,
       unit: :unit
     ]
   end
