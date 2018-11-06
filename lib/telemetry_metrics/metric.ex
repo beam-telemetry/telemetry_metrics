@@ -9,7 +9,7 @@ defmodule Telemetry.Metrics.Metric do
 
   @type t :: %{
           __struct__: module(),
-          name: Metrics.metric_name(),
+          name: Metrics.normalize_metric_name(),
           type: Metrics.metric_type(),
           event_name: Telemetry.event_name(),
           metadata: (Telemetry.event_metadata() -> Telemetry.event_metadata()),

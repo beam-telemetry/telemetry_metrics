@@ -1,6 +1,8 @@
 defmodule Telemetry.MetricsTest do
   use ExUnit.Case
 
+  import ExUnit.CaptureLog
+
   alias Telemetry.Metrics
 
   # Tests common to all metric types.
@@ -97,6 +99,14 @@ defmodule Telemetry.MetricsTest do
         assert %{"action" => "create"} ==
                  metadata_fun.(%{:controller => UserController, "action" => "create"})
       end
+
+      test "return normalized metric and event name in the specification" do
+        metric =
+          apply(Metrics, unquote(metric_type), ["http.request", [name: "http.requests.count"]])
+
+        assert [:http, :request] == metric.event_name
+        assert [:http, :requests, :count] == metric.name
+      end
     end
   end
 
@@ -122,5 +132,21 @@ defmodule Telemetry.MetricsTest do
     event_metadata = %{controller: UserController, action: "create"}
 
     assert %{constant: "metadata"} == metadata_fun.(event_metadata)
+  end
+
+  test "setting metric name with leading, trailing or subsequent dots logs a warning" do
+    for metric_name <- [".metric", "metric.", "metric..name"] do
+      assert capture_log(fn ->
+               Metrics.counter([:my, :event], name: metric_name)
+             end) =~ "Metric or event name #{metric_name} contains"
+    end
+  end
+
+  test "setting event name with leading, trailing or subsequent dots logs a warning" do
+    for event_name <- [".event", "event.", "event..name"] do
+      assert capture_log(fn ->
+               Metrics.counter(event_name, name: [:my, :metric])
+             end) =~ "Metric or event name #{event_name} contains"
+    end
   end
 end
