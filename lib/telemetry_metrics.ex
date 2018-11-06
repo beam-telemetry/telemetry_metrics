@@ -168,7 +168,7 @@ defmodule Telemetry.Metrics do
 
       counter(
         "http.request",
-        name: "http.request.count", metadata: [:controller, :action] tags: [:controller, :action]
+        metadata: [:controller, :action] tags: [:controller, :action]
       )
   """
   @spec counter(Telemetry.event_name(), counter_options()) :: Counter.t()
