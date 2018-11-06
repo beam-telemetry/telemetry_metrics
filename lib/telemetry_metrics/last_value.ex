@@ -3,6 +3,8 @@ defmodule Telemetry.Metrics.LastValue do
   Defines a specification of last value metric.
   """
 
+  alias Telemetry.Metrics
+
   defstruct [:name, :event_name, :metadata, :tags, :description, :unit]
 
   @type t :: %__MODULE__{

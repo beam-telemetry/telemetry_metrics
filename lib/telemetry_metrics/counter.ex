@@ -3,6 +3,8 @@ defmodule Telemetry.Metrics.Counter do
   Defines a specification of counter metric.
   """
 
+  alias Telemetry.Metrics
+
   defstruct [:name, :event_name, :metadata, :tags, :description, :unit]
 
   @type t :: %__MODULE__{

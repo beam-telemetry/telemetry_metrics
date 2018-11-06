@@ -152,6 +152,22 @@ defmodule Telemetry.Metrics do
           | {:description, description()}
           | {:unit, unit()}
 
+  @typedoc """
+  Common fields for metric specifications
+
+  Reporters should assume that these fields are present in all metric specifications.
+  """
+  @type t :: %{
+          __struct__: module(),
+          name: normalized_metric_name(),
+          type: metric_type(),
+          event_name: Telemetry.event_name(),
+          metadata: (Telemetry.event_metadata() -> Telemetry.event_metadata()),
+          tags: tags(),
+          description: description(),
+          unit: unit()
+        }
+
   require Logger
 
   alias Telemetry.Metrics.{Counter, Sum, LastValue}
