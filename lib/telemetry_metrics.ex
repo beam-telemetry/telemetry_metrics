@@ -187,7 +187,7 @@ defmodule Telemetry.Metrics do
         metadata: [:controller, :action] tags: [:controller, :action]
       )
   """
-  @spec counter(Telemetry.event_name(), counter_options()) :: Counter.t()
+  @spec counter(event_name(), counter_options()) :: Counter.t()
   def counter(event_name, options) do
     {metric_name, options} = Keyword.pop(options, :name, event_name)
     event_name = validate_event_or_metric_name!(event_name)
@@ -215,7 +215,7 @@ defmodule Telemetry.Metrics do
 
       sum("user.session_count.change", name: "user.session_count", metadata: [:role], tags: [:role])
   """
-  @spec sum(Telemetry.event_name(), sum_options()) :: Sum.t()
+  @spec sum(event_name(), sum_options()) :: Sum.t()
   def sum(event_name, options) do
     {metric_name, options} = Keyword.pop(options, :name, event_name)
     event_name = validate_event_or_metric_name!(event_name)
@@ -246,7 +246,7 @@ defmodule Telemetry.Metrics do
         description: "Total amount of memory allocated by the Erlang VM", unit: :byte
       )
   """
-  @spec last_value(Telemetry.event_name(), last_value_options()) :: LastValue.t()
+  @spec last_value(event_name(), last_value_options()) :: LastValue.t()
   def last_value(event_name, options) do
     {metric_name, options} = Keyword.pop(options, :name, event_name)
     event_name = validate_event_or_metric_name!(event_name)
