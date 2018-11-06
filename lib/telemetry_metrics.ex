@@ -143,27 +143,7 @@ defmodule Telemetry.Metrics do
           | {:description, description()}
           | {:unit, unit()}
 
-  defmodule Metric do
-    @moduledoc """
-    A metric specification.
-
-    This struct should be used by reporters to initialize the metric at runtime.
-    """
-
-    alias Telemetry.Metrics
-
-    defstruct [:name, :type, :event_name, :metadata, :tags, :description, :unit]
-
-    @type t :: %__MODULE__{
-            name: Metrics.metric_name(),
-            type: Metrics.metric_type(),
-            event_name: Telemetry.event_name(),
-            metadata: (Telemetry.event_metadata() -> Telemetry.event_metadata()),
-            tags: Metrics.tags(),
-            description: Metrics.description(),
-            unit: Metrics.unit()
-          }
-  end
+  alias Telemetry.Metrics.{Counter, Sum, LastValue}
 
   # API
 
@@ -177,16 +157,15 @@ defmodule Telemetry.Metrics do
 
       counter([:http, :request], name: [:http, :requests, :count], tags: [:controller, :action])
   """
-  @spec counter(Telemetry.event_name(), counter_options()) :: Metric.t()
+  @spec counter(Telemetry.event_name(), counter_options()) :: Counter.t()
   def counter(event_name, options) do
     validate_event_name!(event_name)
     validate_metric_options!(options)
     options = Keyword.merge(default_metric_options(event_name), options)
     metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
 
-    %Metric{
+    %Counter{
       name: Keyword.fetch!(options, :name),
-      type: :counter,
       event_name: event_name,
       metadata: metadata_fun,
       tags: Keyword.fetch!(options, :tags),
@@ -205,16 +184,15 @@ defmodule Telemetry.Metrics do
 
       sum([:user, :session_count, :change], name: [:user, :session_count], tags: [:role])
   """
-  @spec sum(Telemetry.event_name(), sum_options()) :: Metric.t()
+  @spec sum(Telemetry.event_name(), sum_options()) :: Sum.t()
   def sum(event_name, options) do
     validate_event_name!(event_name)
     validate_metric_options!(options)
     options = Keyword.merge(default_metric_options(event_name), options)
     metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
 
-    %Metric{
+    %Sum{
       name: Keyword.fetch!(options, :name),
-      type: :sum,
       event_name: event_name,
       metadata: metadata_fun,
       tags: Keyword.fetch!(options, :tags),
@@ -236,16 +214,15 @@ defmodule Telemetry.Metrics do
         description: "Total amount of memory allocated by the Erlang VM", unit: :byte
       )
   """
-  @spec last_value(Telemetry.event_name(), last_value_options()) :: Metric.t()
+  @spec last_value(Telemetry.event_name(), last_value_options()) :: LastValue.t()
   def last_value(event_name, options) do
     validate_event_name!(event_name)
     validate_metric_options!(options)
     options = Keyword.merge(default_metric_options(event_name), options)
     metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
 
-    %Metric{
+    %LastValue{
       name: Keyword.fetch!(options, :name),
-      type: :last_value,
       event_name: event_name,
       metadata: metadata_fun,
       tags: Keyword.fetch!(options, :tags),

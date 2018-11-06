@@ -61,7 +61,6 @@ defmodule Telemetry.MetricsTest do
         metric = apply(Metrics, unquote(metric_type), [event_name, options])
 
         assert event_name = metric.event_name
-        assert unquote(metric_type) == metric.type
         assert event_name == metric.name
         assert [] == metric.tags
         assert nil == metric.description
@@ -89,7 +88,6 @@ defmodule Telemetry.MetricsTest do
         metric = apply(Metrics, unquote(metric_type), [event_name, options])
 
         assert event_name == metric.event_name
-        assert unquote(metric_type) == metric.type
         assert metric_name == metric.name
         assert tags == metric.tags
         assert description == metric.description
