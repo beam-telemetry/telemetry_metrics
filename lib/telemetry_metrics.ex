@@ -86,8 +86,8 @@ defmodule Telemetry.Metrics do
       used to generate tag values
   * `:description` - human-readable description of the metric. Might be used by reporters for
     documentation purposes. Defaults to `nil`;
-  * `:unit` - the unit of event values. Might be used by reporters for documentation purposes.
-    Defaults to `:unit`.
+  * `:unit` - an atom describing the unit of event values. Might be used by reporters for
+    documentation purposes. Defaults to `:unit`.
 
   ## Reporters
 
