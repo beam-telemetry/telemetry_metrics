@@ -76,10 +76,14 @@ defmodule Telemetry.Metrics do
   of the options common to all metric types:
 
   * `:name` - the metric name. Defaults to event name given as first argument;
-  * `:tags_fun` - function called on every event, converting metadata to tags. Defaults to `nil`,
-    which means that all, raw metadata should be treated as tags;
-  * `:tag_keys` - tag keys by which aggregations will be broken down. Defaults to an empty
-    list;
+  * `:tags` - tags by which aggregations will be broken down. Defaults to an empty list;
+  * `:metadata` - determines what part of event metadata is used as the source of tag values.
+    The default value is `:all`. Note that the specified metadata should contain at least those keys
+    which are set as `:tags`. There are three possible values:
+    * `:all` - all event metadata is used;
+    * list of terms, e.g. `[:table, :kind]` - only these keys from the event metadata are used;
+    * one argument function taking the event metadata and returning the metadata which should be
+      used to generate tag values
   * `:description` - human-readable description of the metric. Might be used by reporters for
     documentation purposes. Defaults to `nil`;
   * `:unit` - the unit of event values. Might be used by reporters for documentation purposes.
@@ -123,8 +127,10 @@ defmodule Telemetry.Metrics do
 
   @type metric_name :: [atom(), ...]
   @type metric_type :: :counter | :sum | :last_value | :distribution
-  @type tags_fun :: (Telemetry.event_metadata() -> %{tag_key => term()})
-  @type tag_key :: atom()
+  @type metadata ::
+          :all | [key :: term()] | (Telemetry.event_metadata() -> Telemetry.event_metadata())
+  @type tag :: term()
+  @type tags :: [tag()]
   @type description :: nil | String.t()
   @type unit :: atom()
   @type counter_options :: [metric_option()]
@@ -132,8 +138,8 @@ defmodule Telemetry.Metrics do
   @type last_value_options :: [metric_option()]
   @type metric_option ::
           {:name, metric_name()}
-          | {:tags_fun, tags_fun() | nil}
-          | {:tag_keys, [tag_key()]}
+          | {:metadata, metadata()}
+          | {:tags, tags()}
           | {:description, description()}
           | {:unit, unit()}
 
@@ -146,14 +152,14 @@ defmodule Telemetry.Metrics do
 
     alias Telemetry.Metrics
 
-    defstruct [:name, :type, :event_name, :tags_fun, :tag_keys, :description, :unit]
+    defstruct [:name, :type, :event_name, :metadata, :tags, :description, :unit]
 
     @type t :: %__MODULE__{
             name: Metrics.metric_name(),
             type: Metrics.metric_type(),
             event_name: Telemetry.event_name(),
-            tags_fun: Telemetry.Metrics.tags_fun() | nil,
-            tag_keys: [Metrics.tag_key()],
+            metadata: (Telemetry.event_metadata() -> Telemetry.event_metadata()),
+            tags: Metrics.tags(),
             description: Metrics.description(),
             unit: Metrics.unit()
           }
@@ -172,13 +178,14 @@ defmodule Telemetry.Metrics do
     validate_event_name!(event_name)
     validate_metric_options!(options)
     options = Keyword.merge(default_metric_options(event_name), options)
+    metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
 
     %Metric{
       name: Keyword.fetch!(options, :name),
       type: :counter,
       event_name: event_name,
-      tags_fun: Keyword.fetch!(options, :tags_fun),
-      tag_keys: Keyword.fetch!(options, :tag_keys),
+      metadata: metadata_fun,
+      tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -195,13 +202,14 @@ defmodule Telemetry.Metrics do
     validate_event_name!(event_name)
     validate_metric_options!(options)
     options = Keyword.merge(default_metric_options(event_name), options)
+    metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
 
     %Metric{
       name: Keyword.fetch!(options, :name),
       type: :sum,
       event_name: event_name,
-      tags_fun: Keyword.fetch!(options, :tags_fun),
-      tag_keys: Keyword.fetch!(options, :tag_keys),
+      metadata: metadata_fun,
+      tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -218,13 +226,14 @@ defmodule Telemetry.Metrics do
     validate_event_name!(event_name)
     validate_metric_options!(options)
     options = Keyword.merge(default_metric_options(event_name), options)
+    metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
 
     %Metric{
       name: Keyword.fetch!(options, :name),
       type: :last_value,
       event_name: event_name,
-      tags_fun: Keyword.fetch!(options, :tags_fun),
-      tag_keys: Keyword.fetch!(options, :tag_keys),
+      metadata: metadata_fun,
+      tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -249,8 +258,8 @@ defmodule Telemetry.Metrics do
   defp default_metric_options(event_name) do
     [
       name: event_name,
-      tags_fun: nil,
-      tag_keys: [],
+      metadata: :all,
+      tags: [],
       description: nil,
       unit: :unit
     ]
@@ -259,8 +268,8 @@ defmodule Telemetry.Metrics do
   @spec validate_metric_options!([metric_option()]) :: :ok | no_return()
   defp validate_metric_options!(options) do
     if metric_name = Keyword.get(options, :name), do: validate_metric_name!(metric_name)
-    if tags_fun = Keyword.get(options, :tags_fun), do: validate_tags_fun!(tags_fun)
-    if tag_keys = Keyword.get(options, :tag_keys), do: validate_tag_keys!(tag_keys)
+    if metadata = Keyword.get(options, :metadata), do: validate_metadata!(metadata)
+    if tags = Keyword.get(options, :tags), do: validate_tags!(tags)
     if description = Keyword.get(options, :description), do: validate_description!(description)
     if unit = Keyword.get(options, :unit), do: validate_unit!(unit)
   end
@@ -280,37 +289,38 @@ defmodule Telemetry.Metrics do
           "Expected metric name to be a non empty list of atoms, got: #{inspect(term)}"
   end
 
-  @spec validate_tags_fun!(term()) :: :ok | no_return()
-  defp validate_tags_fun!(fun) when is_function(fun, 1) do
+  @spec validate_metadata!(term()) :: :ok | no_return()
+  defp validate_metadata!(fun) when is_function(fun, 1) do
     :ok
   end
 
-  defp validate_tags_fun!(fun) when is_function(fun) do
+  defp validate_metadata!(fun) when is_function(fun) do
     {:arity, arity} = :erlang.fun_info(fun, :arity)
 
     raise ArgumentError,
-          "Expected tags fun to be a one-argument function, but the arity is #{arity}"
+          "Expected metadata fun to be a one-argument function, but the arity is #{arity}"
   end
 
-  defp validate_tags_fun!(nil) do
+  defp validate_metadata!(:all) do
     :ok
   end
 
-  defp validate_tags_fun!(term) do
-    raise ArgumentError, "Expected tags fun to be a function or nil, got: #{inspect(term)}"
+  defp validate_metadata!(list) when is_list(list) do
+    :ok
   end
 
-  @spec validate_tag_keys!(term()) :: :ok | no_return()
-  defp validate_tag_keys!(list) when is_list(list) do
-    if Enum.all?(list, &is_atom/1) do
-      :ok
-    else
-      raise ArgumentError, "Expected tag keys to be a list of atoms, got: #{inspect(list)}"
-    end
+  defp validate_metadata!(term) do
+    raise ArgumentError,
+          "Expected metadata to be an atom :all, a list or a function, got #{inspect(term)}"
   end
 
-  defp validate_tag_keys!(term) do
-    raise ArgumentError, "Expected tag keys to be a list of atoms, got: #{inspect(term)}"
+  @spec validate_tags!(term()) :: :ok | no_return()
+  defp validate_tags!(list) when is_list(list) do
+    :ok
+  end
+
+  defp validate_tags!(term) do
+    raise ArgumentError, "Expected tag keys to be a list, got: #{inspect(term)}"
   end
 
   @spec validate_description!(term()) :: :ok | no_return()
@@ -330,4 +340,10 @@ defmodule Telemetry.Metrics do
   defp validate_unit!(term) do
     raise ArgumentError, "Expected unit to be an atom, got #{inspect(term)}"
   end
+
+  @spec metadata_spec_to_function(metadata()) ::
+          (Telemetry.event_metadata() -> Telemetry.event_metadata())
+  defp metadata_spec_to_function(:all), do: & &1
+  defp metadata_spec_to_function(keys) when is_list(keys), do: &Map.take(&1, keys)
+  defp metadata_spec_to_function(fun), do: fun
 end

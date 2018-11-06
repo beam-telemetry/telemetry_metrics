@@ -1,6 +1,8 @@
 defmodule Telemetry.MetricsTest do
   use ExUnit.Case
 
+  alias Telemetry.Metrics
+
   # Tests common to all metric types.
   for metric_type <- [:counter, :sum, :last_value] do
     describe "#{metric_type}/2" do
@@ -8,7 +10,7 @@ defmodule Telemetry.MetricsTest do
         assert_raise ArgumentError, fn ->
           event_name = [:my, "event"]
           options = []
-          apply(Telemetry.Metrics, unquote(metric_type), [event_name, options])
+          apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
 
@@ -16,23 +18,23 @@ defmodule Telemetry.MetricsTest do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
           options = [name: ["metric"]]
-          apply(Telemetry.Metrics, unquote(metric_type), [event_name, options])
+          apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
 
-      test "raises when tags fun is invalid" do
+      test "raises when metadata is invalid" do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
-          options = [tags_fun: fn x, y -> %{x: x, y: y} end]
-          apply(Telemetry.Metrics, unquote(metric_type), [event_name, options])
+          options = [metadata: 1]
+          apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
 
-      test "raises when tag keys are invalid" do
+      test "raises when tags are invalid" do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
-          options = [tag_keys: ["tag"]]
-          apply(Telemetry.Metrics, unquote(metric_type), [event_name, options])
+          options = [tags: 1]
+          apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
 
@@ -40,7 +42,7 @@ defmodule Telemetry.MetricsTest do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
           options = [description: :"metric description"]
-          apply(Telemetry.Metrics, unquote(metric_type), [event_name, options])
+          apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
 
@@ -48,7 +50,7 @@ defmodule Telemetry.MetricsTest do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
           options = [unit: "second"]
-          apply(Telemetry.Metrics, unquote(metric_type), [event_name, options])
+          apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
 
@@ -56,43 +58,71 @@ defmodule Telemetry.MetricsTest do
         event_name = [:my, :event]
         options = []
 
-        metric = apply(Telemetry.Metrics, unquote(metric_type), [event_name, options])
+        metric = apply(Metrics, unquote(metric_type), [event_name, options])
 
         assert event_name = metric.event_name
         assert unquote(metric_type) == metric.type
         assert event_name == metric.name
-        assert nil == metric.tags_fun
-        assert [] == metric.tag_keys
+        assert [] == metric.tags
         assert nil == metric.description
         assert :unit == metric.unit
+        metadata_fun = metric.metadata
+        assert 1 == metadata_fun.(1)
       end
 
       test "returns #{metric_type} specification with overriden fields" do
         event_name = [:my, :event]
         metric_name = [:metric]
-        tags_fun = fn metadata -> metadata end
-        tag_keys = [:tag1, :tag2]
+        metadata = ["action"]
+        tags = [:controller, "action"]
         description = "a metric"
         unit = :second
 
         options = [
           name: metric_name,
-          tags_fun: tags_fun,
-          tag_keys: tag_keys,
+          metadata: metadata,
+          tags: tags,
           description: description,
           unit: unit
         ]
 
-        metric = apply(Telemetry.Metrics, unquote(metric_type), [event_name, options])
+        metric = apply(Metrics, unquote(metric_type), [event_name, options])
 
         assert event_name == metric.event_name
         assert unquote(metric_type) == metric.type
         assert metric_name == metric.name
-        assert tags_fun == metric.tags_fun
-        assert tag_keys == metric.tag_keys
+        assert tags == metric.tags
         assert description == metric.description
         assert unit == metric.unit
+        metadata_fun = metric.metadata
+
+        assert %{"action" => "create"} ==
+                 metadata_fun.(%{:controller => UserController, "action" => "create"})
       end
     end
+  end
+
+  test "setting :all as metadata returns identity function in metric spec" do
+    metric = Metrics.counter([:my, :event], metadata: :all)
+    metadata_fun = metric.metadata
+    event_metadata = %{controller: UserController, action: "create"}
+
+    assert event_metadata == metadata_fun.(event_metadata)
+  end
+
+  test "setting list of terms as metadata returns function returning subset of a map in metric spec" do
+    metric = Metrics.counter([:my, :event], metadata: [:action])
+    metadata_fun = metric.metadata
+    event_metadata = %{controller: UserController, action: "create"}
+
+    assert %{action: "create"} == metadata_fun.(event_metadata)
+  end
+
+  test "setting function as metadata returns that function in metric spec" do
+    metric = Metrics.counter([:my, :event], metadata: fn _ -> %{constant: "metadata"} end)
+    metadata_fun = metric.metadata
+    event_metadata = %{controller: UserController, action: "create"}
+
+    assert %{constant: "metadata"} == metadata_fun.(event_metadata)
   end
 end
