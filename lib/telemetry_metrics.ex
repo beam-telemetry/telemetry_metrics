@@ -78,8 +78,8 @@ defmodule Telemetry.Metrics do
   * `:name` - the metric name. Defaults to event name given as first argument;
   * `:tags` - tags by which aggregations will be broken down. Defaults to an empty list;
   * `:metadata` - determines what part of event metadata is used as the source of tag values.
-    The default value is `:all`. Note that the specified metadata should contain at least those keys
-    which are set as `:tags`. There are three possible values:
+    Default value is an empty list. Note that the specified metadata should contain at least those
+    keys which are set as `:tags`. There are three possible values of this option:
     * `:all` - all event metadata is used;
     * list of terms, e.g. `[:table, :kind]` - only these keys from the event metadata are used;
     * one argument function taking the event metadata and returning the metadata which should be
@@ -250,7 +250,7 @@ defmodule Telemetry.Metrics do
   defp default_metric_options(event_name) do
     [
       name: event_name,
-      metadata: :all,
+      metadata: [],
       tags: [],
       description: nil,
       unit: :unit
@@ -336,6 +336,7 @@ defmodule Telemetry.Metrics do
   @spec metadata_spec_to_function(metadata()) ::
           (Telemetry.event_metadata() -> Telemetry.event_metadata())
   defp metadata_spec_to_function(:all), do: & &1
+  defp metadata_spec_to_function([]), do: fn _ -> %{} end
   defp metadata_spec_to_function(keys) when is_list(keys), do: &Map.take(&1, keys)
   defp metadata_spec_to_function(fun), do: fun
 end

@@ -66,7 +66,7 @@ defmodule Telemetry.MetricsTest do
         assert nil == metric.description
         assert :unit == metric.unit
         metadata_fun = metric.metadata
-        assert 1 == metadata_fun.(1)
+        assert %{} == metadata_fun.(%{key: 1, another_key: 2})
       end
 
       test "returns #{metric_type} specification with overriden fields" do
