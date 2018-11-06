@@ -172,6 +172,10 @@ defmodule Telemetry.Metrics do
 
   See "Metric specifications" section in the top-level documentation of this module for more
   information.
+
+  ## Example
+
+      counter([:http, :request], name: [:http, :requests, :count], tags: [:controller, :action])
   """
   @spec counter(Telemetry.event_name(), counter_options()) :: Metric.t()
   def counter(event_name, options) do
@@ -196,6 +200,10 @@ defmodule Telemetry.Metrics do
 
   See "Metric specifications" section in the top-level documentation of this module for more
   information.
+
+  ## Example
+
+      sum([:user, :session_count, :change], name: [:user, :session_count], tags: [:role])
   """
   @spec sum(Telemetry.event_name(), sum_options()) :: Metric.t()
   def sum(event_name, options) do
@@ -220,6 +228,13 @@ defmodule Telemetry.Metrics do
 
   See "Metric specifications" section in the top-level documentation of this module for more
   information.
+
+  ## Example
+
+      last_value(
+        [:vm, :memory, :total],
+        description: "Total amount of memory allocated by the Erlang VM", unit: :byte
+      )
   """
   @spec last_value(Telemetry.event_name(), last_value_options()) :: Metric.t()
   def last_value(event_name, options) do
