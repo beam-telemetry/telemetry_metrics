@@ -189,18 +189,16 @@ defmodule Telemetry.Metrics do
   """
   @spec counter(Telemetry.event_name(), counter_options()) :: Counter.t()
   def counter(event_name, options) do
-    validate_event_name!(event_name)
+    {metric_name, options} = Keyword.pop(options, :name, event_name)
+    event_name = validate_event_or_metric_name!(event_name)
+    metric_name = validate_event_or_metric_name!(metric_name)
     validate_metric_options!(options)
-    options = Keyword.merge(default_metric_options(event_name), options)
-
-    event_name = normalize_event_or_metric_name(event_name)
-    metric_name = options |> Keyword.fetch!(:name) |> normalize_event_or_metric_name()
-    metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
+    options = Keyword.merge(default_metric_options(), options)
 
     %Counter{
       name: metric_name,
       event_name: event_name,
-      metadata: metadata_fun,
+      metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
@@ -219,18 +217,16 @@ defmodule Telemetry.Metrics do
   """
   @spec sum(Telemetry.event_name(), sum_options()) :: Sum.t()
   def sum(event_name, options) do
-    validate_event_name!(event_name)
+    {metric_name, options} = Keyword.pop(options, :name, event_name)
+    event_name = validate_event_or_metric_name!(event_name)
+    metric_name = validate_event_or_metric_name!(metric_name)
     validate_metric_options!(options)
-    options = Keyword.merge(default_metric_options(event_name), options)
-
-    event_name = normalize_event_or_metric_name(event_name)
-    metric_name = options |> Keyword.fetch!(:name) |> normalize_event_or_metric_name()
-    metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
+    options = Keyword.merge(default_metric_options(), options)
 
     %Sum{
       name: metric_name,
       event_name: event_name,
-      metadata: metadata_fun,
+      metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
@@ -252,18 +248,16 @@ defmodule Telemetry.Metrics do
   """
   @spec last_value(Telemetry.event_name(), last_value_options()) :: LastValue.t()
   def last_value(event_name, options) do
-    validate_event_name!(event_name)
+    {metric_name, options} = Keyword.pop(options, :name, event_name)
+    event_name = validate_event_or_metric_name!(event_name)
+    metric_name = validate_event_or_metric_name!(metric_name)
     validate_metric_options!(options)
-    options = Keyword.merge(default_metric_options(event_name), options)
-
-    event_name = normalize_event_or_metric_name(event_name)
-    metric_name = options |> Keyword.fetch!(:name) |> normalize_event_or_metric_name()
-    metadata_fun = options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function()
+    options = Keyword.merge(default_metric_options(), options)
 
     %LastValue{
       name: metric_name,
       event_name: event_name,
-      metadata: metadata_fun,
+      metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
@@ -272,27 +266,41 @@ defmodule Telemetry.Metrics do
 
   # Helpers
 
-  @spec validate_event_name!(term()) :: :ok | no_return()
-  defp validate_event_name!(list) when is_list(list) do
+  @spec validate_event_or_metric_name!(term()) ::
+          normalized_metric_name() | Telemetry.event_name() | no_return()
+  defp validate_event_or_metric_name!(list) when is_list(list) do
     if Enum.all?(list, &is_atom/1) do
-      :ok
+      list
     else
-      raise ArgumentError, "Expected event name to be a list of atoms, got: #{inspect(list)}"
+      raise ArgumentError,
+            "Expected event or metric name to be a list of atoms or a string, " <>
+              "got #{inspect(list)}"
     end
   end
 
-  defp validate_event_name!(term) do
-    if String.valid?(term) do
-      :ok
-    else
-      raise ArgumentError, "Expected event name to be a list of atoms, got: #{inspect(term)}"
+  defp validate_event_or_metric_name!(event_or_metric_name)
+       when is_binary(event_or_metric_name) do
+    segments = String.split(event_or_metric_name, ".")
+
+    if Enum.any?(segments, &(&1 == "")) do
+      Logger.warn(fn ->
+        "Event or metric name #{event_or_metric_name} contains leading, trailing or " <>
+          "consecutive dots"
+      end)
     end
+
+    Enum.map(segments, &String.to_atom/1)
   end
 
-  @spec default_metric_options(Telemetry.event_name()) :: [metric_option()]
-  defp default_metric_options(event_name) do
+  defp validate_event_or_metric_name!(term) do
+    raise ArgumentError,
+          "Expected event or metric name to be a list of atoms or a string, " <>
+            "got #{inspect(term)}"
+  end
+
+  @spec default_metric_options() :: [metric_option()]
+  defp default_metric_options() do
     [
-      name: event_name,
       metadata: [],
       tags: [],
       description: nil,
@@ -302,30 +310,10 @@ defmodule Telemetry.Metrics do
 
   @spec validate_metric_options!([metric_option()]) :: :ok | no_return()
   defp validate_metric_options!(options) do
-    if metric_name = Keyword.get(options, :name), do: validate_metric_name!(metric_name)
     if metadata = Keyword.get(options, :metadata), do: validate_metadata!(metadata)
     if tags = Keyword.get(options, :tags), do: validate_tags!(tags)
     if description = Keyword.get(options, :description), do: validate_description!(description)
     if unit = Keyword.get(options, :unit), do: validate_unit!(unit)
-  end
-
-  @spec validate_metric_name!(term()) :: :ok | no_return()
-  defp validate_metric_name!([_ | _] = list) do
-    if Enum.all?(list, &is_atom/1) do
-      :ok
-    else
-      raise ArgumentError,
-            "Expected metric name to be a non empty list of atoms, got: #{inspect(list)}"
-    end
-  end
-
-  defp validate_metric_name!(term) do
-    if String.valid?(term) do
-      :ok
-    else
-      raise ArgumentError,
-            "Expected metric name to be a non empty list of atoms, got: #{inspect(term)}"
-    end
   end
 
   @spec validate_metadata!(term()) :: :ok | no_return()
@@ -386,21 +374,4 @@ defmodule Telemetry.Metrics do
   defp metadata_spec_to_function([]), do: fn _ -> %{} end
   defp metadata_spec_to_function(keys) when is_list(keys), do: &Map.take(&1, keys)
   defp metadata_spec_to_function(fun), do: fun
-
-  @spec normalize_event_or_metric_name(event_name() | metric_name()) ::
-          normalized_metric_name() | Telemetry.event_name()
-  defp normalize_event_or_metric_name(list) when is_list(list), do: list
-
-  defp normalize_event_or_metric_name(event_or_metric_name) do
-    segments = String.split(event_or_metric_name, ".")
-
-    if Enum.any?(segments, &(&1 == "")) do
-      Logger.warn(fn ->
-        "Metric or event name #{event_or_metric_name} contains leading, trailing or" <>
-          "consecutive dots"
-      end)
-    end
-
-    Enum.map(segments, &String.to_atom/1)
-  end
 end

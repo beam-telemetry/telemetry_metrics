@@ -138,7 +138,7 @@ defmodule Telemetry.MetricsTest do
     for metric_name <- [".metric", "metric.", "metric..name"] do
       assert capture_log(fn ->
                Metrics.counter([:my, :event], name: metric_name)
-             end) =~ "Metric or event name #{metric_name} contains"
+             end) =~ "Event or metric name #{metric_name} contains"
     end
   end
 
@@ -146,7 +146,7 @@ defmodule Telemetry.MetricsTest do
     for event_name <- [".event", "event.", "event..name"] do
       assert capture_log(fn ->
                Metrics.counter(event_name, name: [:my, :metric])
-             end) =~ "Metric or event name #{event_name} contains"
+             end) =~ "Event or metric name #{event_name} contains"
     end
   end
 end
