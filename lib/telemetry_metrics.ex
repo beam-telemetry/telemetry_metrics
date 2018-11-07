@@ -273,7 +273,7 @@ defmodule Telemetry.Metrics do
       list
     else
       raise ArgumentError,
-            "Expected event or metric name to be a list of atoms or a string, " <>
+            "expected event or metric name to be a list of atoms or a string, " <>
               "got #{inspect(list)}"
     end
   end
@@ -294,7 +294,7 @@ defmodule Telemetry.Metrics do
 
   defp validate_event_or_metric_name!(term) do
     raise ArgumentError,
-          "Expected event or metric name to be a list of atoms or a string, " <>
+          "expected event or metric name to be a list of atoms or a string, " <>
             "got #{inspect(term)}"
   end
 
@@ -325,7 +325,7 @@ defmodule Telemetry.Metrics do
     {:arity, arity} = :erlang.fun_info(fun, :arity)
 
     raise ArgumentError,
-          "Expected metadata fun to be a one-argument function, but the arity is #{arity}"
+          "expected metadata fun to be a one-argument function, but the arity is #{arity}"
   end
 
   defp validate_metadata!(:all) do
@@ -338,7 +338,7 @@ defmodule Telemetry.Metrics do
 
   defp validate_metadata!(term) do
     raise ArgumentError,
-          "Expected metadata to be an atom :all, a list or a function, got #{inspect(term)}"
+          "expected metadata to be an atom :all, a list or a function, got #{inspect(term)}"
   end
 
   @spec validate_tags!(term()) :: :ok | no_return()
@@ -347,7 +347,7 @@ defmodule Telemetry.Metrics do
   end
 
   defp validate_tags!(term) do
-    raise ArgumentError, "Expected tag keys to be a list, got: #{inspect(term)}"
+    raise ArgumentError, "expected tag keys to be a list, got: #{inspect(term)}"
   end
 
   @spec validate_description!(term()) :: :ok | no_return()
@@ -355,7 +355,7 @@ defmodule Telemetry.Metrics do
     if String.valid?(term) do
       :ok
     else
-      raise ArgumentError, "Expected description to be a string, got #{inspect(term)}"
+      raise ArgumentError, "expected description to be a string, got #{inspect(term)}"
     end
   end
 
@@ -365,7 +365,7 @@ defmodule Telemetry.Metrics do
   end
 
   defp validate_unit!(term) do
-    raise ArgumentError, "Expected unit to be an atom, got #{inspect(term)}"
+    raise ArgumentError, "expected unit to be an atom, got #{inspect(term)}"
   end
 
   @spec metadata_spec_to_function(metadata()) ::
