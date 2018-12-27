@@ -6,7 +6,7 @@ defmodule Telemetry.MetricsTest do
   alias Telemetry.Metrics
 
   # Tests common to all metric types.
-  for metric_type <- [:counter, :sum, :last_value] do
+  for metric_type <- [:counter, :sum, :last_value, :distribution] do
     describe "#{metric_type}/2" do
       test "raises when event name is invalid" do
         assert_raise ArgumentError, fn ->
@@ -147,6 +147,30 @@ defmodule Telemetry.MetricsTest do
       assert capture_log(fn ->
                Metrics.counter(event_name, name: [:my, :metric])
              end) =~ "Event or metric name #{event_name} contains"
+    end
+  end
+
+  test "distribution/2 includes default bucket boundaries" do
+    metric = Metrics.distribution("http.requests", [])
+
+    assert [100, 200, 300, 400, 500] == metric.buckets
+  end
+
+  test "distribution/2 raises if bucket boundaries are not increasing" do
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("http.requests", buckets: [0, 200, 100])
+    end
+  end
+
+  test "distribution/2 raises if bucket boundaries are empty" do
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("http.requests", buckets: [])
+    end
+  end
+
+  test "distribution/2 raises if bucket boundary is not a number" do
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("http.requests", buckets: [0, 100, "200"])
     end
   end
 end

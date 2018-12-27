@@ -63,6 +63,12 @@ defmodule Telemetry.Metrics do
   emitted with values falling into defined buckets. Histogram values can be used to compute
   approximation of useful statistics about the data, like quantiles, minimum or maximum.
 
+  For example, given boundaries `[0, 100, 200]`, the distribution metric produces four values:
+  * number of event values less than or equal to 0
+  * number of event values greater than 0 and less than or equal to 100
+  * number of event values greater than 100 and less than or equal to 200
+  * number of event values greater than 200
+
   ## Metric specifications
 
   Metric specification is a data structure describing the metric - its name, type, name of the
@@ -132,6 +138,10 @@ defmodule Telemetry.Metrics do
   metric types and identifiers in the system they publish metrics to.
   """
 
+  require Logger
+
+  alias Telemetry.Metrics.{Counter, Sum, LastValue, Distribution}
+
   @type event_name :: String.t() | Telemetry.event_name()
   @type metric_name :: String.t() | normalized_metric_name()
   @type normalized_metric_name :: [atom(), ...]
@@ -145,6 +155,7 @@ defmodule Telemetry.Metrics do
   @type counter_options :: [metric_option()]
   @type sum_options :: [metric_option()]
   @type last_value_options :: [metric_option()]
+  @type distribution_options :: [metric_option() | {:buckets, Distribution.buckets()}]
   @type metric_option ::
           {:name, metric_name()}
           | {:metadata, metadata()}
@@ -168,9 +179,7 @@ defmodule Telemetry.Metrics do
           unit: unit()
         }
 
-  require Logger
-
-  alias Telemetry.Metrics.{Counter, Sum, LastValue}
+  @default_distribution_buckets [100, 200, 300, 400, 500]
 
   # API
 
@@ -259,6 +268,46 @@ defmodule Telemetry.Metrics do
       event_name: event_name,
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
+      description: Keyword.fetch!(options, :description),
+      unit: Keyword.fetch!(options, :unit)
+    }
+  end
+
+  @doc """
+  Returns a specification of distribution metric.
+
+  In addition to common metric options, it accepts one extra option:
+  * `:buckets` - a list distribution bucket boundaries. Defaults to
+  `#{inspect(@default_distribution_buckets)}`.
+
+  See "Metric specifications" section in the top-level documentation of this module for more
+  information.
+
+  ## Example
+
+      distribution(
+        "http.request",
+        buckets: [100, 200, 300],
+        metadata: [:controller, :action],
+        tags: [:controller, :action],
+      )
+  """
+  @spec distribution(event_name(), distribution_options()) :: Distribution.t()
+  def distribution(event_name, options) do
+    {metric_name, options} = Keyword.pop(options, :name, event_name)
+    event_name = validate_event_or_metric_name!(event_name)
+    metric_name = validate_event_or_metric_name!(metric_name)
+    {buckets, options} = Keyword.pop(options, :buckets, @default_distribution_buckets)
+    validate_distribution_buckets!(buckets)
+    validate_metric_options!(options)
+    options = Keyword.merge(default_metric_options(), options)
+
+    %Distribution{
+      name: metric_name,
+      event_name: event_name,
+      metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
+      tags: Keyword.fetch!(options, :tags),
+      buckets: buckets,
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -366,6 +415,23 @@ defmodule Telemetry.Metrics do
 
   defp validate_unit!(term) do
     raise ArgumentError, "expected unit to be an atom, got #{inspect(term)}"
+  end
+
+  @spec validate_distribution_buckets!(term()) :: :ok | no_return()
+  defp validate_distribution_buckets!([_ | _] = buckets) do
+    unless Enum.all?(buckets, &is_number/1) do
+      raise ArgumentError, "expected buckets to be a list of numbers, got #{inspect(buckets)}"
+    end
+
+    unless buckets == Enum.sort(buckets) do
+      raise ArgumentError, "expected buckets to be ordered ascending, got #{inspect(buckets)}"
+    end
+
+    :ok
+  end
+
+  defp validate_distribution_buckets!(term) do
+    raise ArgumentError, "expected buckets to be a non-empty list, got #{inspect(term)}"
   end
 
   @spec metadata_spec_to_function(metadata()) ::
