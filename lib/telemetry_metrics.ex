@@ -195,7 +195,7 @@ defmodule Telemetry.Metrics do
       )
   """
   @spec counter(event_name(), counter_options()) :: Counter.t()
-  def counter(event_name, options) do
+  def counter(event_name, options \\ []) do
     {metric_name, options} = Keyword.pop(options, :name, event_name)
     event_name = validate_event_or_metric_name!(event_name)
     metric_name = validate_event_or_metric_name!(metric_name)
@@ -223,7 +223,7 @@ defmodule Telemetry.Metrics do
       sum("user.session_count.change", name: "user.session_count", metadata: [:role], tags: [:role])
   """
   @spec sum(event_name(), sum_options()) :: Sum.t()
-  def sum(event_name, options) do
+  def sum(event_name, options \\ []) do
     {metric_name, options} = Keyword.pop(options, :name, event_name)
     event_name = validate_event_or_metric_name!(event_name)
     metric_name = validate_event_or_metric_name!(metric_name)
@@ -254,7 +254,7 @@ defmodule Telemetry.Metrics do
       )
   """
   @spec last_value(event_name(), last_value_options()) :: LastValue.t()
-  def last_value(event_name, options) do
+  def last_value(event_name, options \\ []) do
     {metric_name, options} = Keyword.pop(options, :name, event_name)
     event_name = validate_event_or_metric_name!(event_name)
     metric_name = validate_event_or_metric_name!(metric_name)
