@@ -179,8 +179,6 @@ defmodule Telemetry.Metrics do
           unit: unit()
         }
 
-  @default_distribution_buckets [100, 200, 300, 400, 500]
-
   # API
 
   @doc """
@@ -276,9 +274,8 @@ defmodule Telemetry.Metrics do
   @doc """
   Returns a specification of distribution metric.
 
-  In addition to common metric options, it accepts one extra option:
-  * `:buckets` - a list distribution bucket boundaries. Defaults to
-  `#{inspect(@default_distribution_buckets)}`.
+  For a distribution metric, it is required that you include a `:buckets` field in the options
+  keyword list.
 
   See "Metric specifications" section in the top-level documentation of this module for more
   information.
@@ -297,7 +294,7 @@ defmodule Telemetry.Metrics do
     {metric_name, options} = Keyword.pop(options, :name, event_name)
     event_name = validate_event_or_metric_name!(event_name)
     metric_name = validate_event_or_metric_name!(metric_name)
-    {buckets, options} = Keyword.pop(options, :buckets, @default_distribution_buckets)
+    buckets = Keyword.fetch!(options, :buckets)
     validate_distribution_buckets!(buckets)
     validate_metric_options!(options)
     options = Keyword.merge(default_metric_options(), options)
