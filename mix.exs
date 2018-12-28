@@ -29,7 +29,7 @@ defmodule Telemetry.Metrics.MixProject do
     [
       {:telemetry, "~> 0.2"},
       {:ex_doc, "~> 0.18.0", only: :docs},
-      {:dialyxir, "~> 1.0.0-rc.3", only: :test}
+      {:dialyxir, "~> 1.0.0-rc.3", only: :test, runtime: false}
     ]
   end
 end
