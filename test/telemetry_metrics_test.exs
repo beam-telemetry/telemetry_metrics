@@ -6,12 +6,17 @@ defmodule Telemetry.MetricsTest do
   alias Telemetry.Metrics
 
   # Tests common to all metric types.
-  for metric_type <- [:counter, :sum, :last_value] do
+  for {metric_type, extra_options} <- [
+        counter: [],
+        sum: [],
+        last_value: [],
+        distribution: [buckets: [0, 100, 200]]
+      ] do
     describe "#{metric_type}/2" do
       test "raises when event name is invalid" do
         assert_raise ArgumentError, fn ->
           event_name = [:my, "event"]
-          options = []
+          options = unquote(extra_options)
           apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
@@ -19,7 +24,7 @@ defmodule Telemetry.MetricsTest do
       test "raises when metric name is invalid" do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
-          options = [name: ["metric"]]
+          options = [name: ["metric"]] ++ unquote(extra_options)
           apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
@@ -27,7 +32,7 @@ defmodule Telemetry.MetricsTest do
       test "raises when metadata is invalid" do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
-          options = [metadata: 1]
+          options = [metadata: 1] ++ unquote(extra_options)
           apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
@@ -35,7 +40,7 @@ defmodule Telemetry.MetricsTest do
       test "raises when tags are invalid" do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
-          options = [tags: 1]
+          options = [tags: 1] ++ unquote(extra_options)
           apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
@@ -43,7 +48,7 @@ defmodule Telemetry.MetricsTest do
       test "raises when description is invalid" do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
-          options = [description: :"metric description"]
+          options = [description: :"metric description"] ++ unquote(extra_options)
           apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
@@ -51,14 +56,14 @@ defmodule Telemetry.MetricsTest do
       test "raises when unit is invalid" do
         assert_raise ArgumentError, fn ->
           event_name = [:my, :event]
-          options = [unit: "second"]
+          options = [unit: "second"] ++ unquote(extra_options)
           apply(Metrics, unquote(metric_type), [event_name, options])
         end
       end
 
       test "returns #{metric_type} specification with default fields" do
         event_name = [:my, :event]
-        options = []
+        options = [] ++ unquote(extra_options)
 
         metric = apply(Metrics, unquote(metric_type), [event_name, options])
 
@@ -79,13 +84,14 @@ defmodule Telemetry.MetricsTest do
         description = "a metric"
         unit = :second
 
-        options = [
-          name: metric_name,
-          metadata: metadata,
-          tags: tags,
-          description: description,
-          unit: unit
-        ]
+        options =
+          [
+            name: metric_name,
+            metadata: metadata,
+            tags: tags,
+            description: description,
+            unit: unit
+          ] ++  unquote(extra_options)
 
         metric = apply(Metrics, unquote(metric_type), [event_name, options])
 
@@ -102,7 +108,10 @@ defmodule Telemetry.MetricsTest do
 
       test "return normalized metric and event name in the specification" do
         metric =
-          apply(Metrics, unquote(metric_type), ["http.request", [name: "http.requests.count"]])
+          apply(Metrics, unquote(metric_type), [
+            "http.request",
+            [name: "http.requests.count"] ++ unquote(extra_options)
+          ])
 
         assert [:http, :request] == metric.event_name
         assert [:http, :requests, :count] == metric.name
@@ -147,6 +156,30 @@ defmodule Telemetry.MetricsTest do
       assert capture_log(fn ->
                Metrics.counter(event_name, name: [:my, :metric])
              end) =~ "Event or metric name #{event_name} contains"
+    end
+  end
+
+  test "distribution/2 raises if bucket boundaries are not increasing" do
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("http.requests", buckets: [0, 200, 100])
+    end
+  end
+
+  test "distribution/2 raises if bucket boundaries are empty" do
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("http.requests", buckets: [])
+    end
+  end
+
+  test "distribution/2 raises if bucket boundary is not a number" do
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("http.requests", buckets: [0, 100, "200"])
+    end
+  end
+
+  test "distribution/2 raises if bucket boundaries are not provided" do
+    assert_raise KeyError, fn ->
+      Metrics.distribution("http.requests", [])
     end
   end
 end
