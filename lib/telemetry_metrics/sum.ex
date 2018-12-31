@@ -9,8 +9,8 @@ defmodule Telemetry.Metrics.Sum do
 
   @type t :: %__MODULE__{
           name: Metrics.normalized_metric_name(),
-          event_name: Telemetry.event_name(),
-          metadata: (Telemetry.event_metadata() -> Telemetry.event_metadata()),
+          event_name: :telemetry.event_name(),
+          metadata: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           tags: Metrics.tags(),
           description: Metrics.description(),
           unit: Metrics.unit()
