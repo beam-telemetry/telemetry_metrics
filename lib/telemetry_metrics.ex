@@ -21,10 +21,10 @@ defmodule Telemetry.Metrics do
   application. On each request, you might emit an event with the name of the controller and action
   handling that request, e.g.:
 
-      Telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "index"})
-      Telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "index"})
-      Telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "create"})
-      Telemetry.execute([:http, :request], 1, %{controller: "product_controller", action: "get"})
+      :telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "index"})
+      :telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "index"})
+      :telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "create"})
+      :telemetry.execute([:http, :request], 1, %{controller: "product_controller", action: "get"})
 
   With multi-dimensional data model, the result of aggregating those events by `:controller` and
   `:action` tags would look like this:
@@ -142,12 +142,12 @@ defmodule Telemetry.Metrics do
 
   alias Telemetry.Metrics.{Counter, Sum, LastValue, Distribution}
 
-  @type event_name :: String.t() | Telemetry.event_name()
+  @type event_name :: String.t() | :telemetry.event_name()
   @type metric_name :: String.t() | normalized_metric_name()
   @type normalized_metric_name :: [atom(), ...]
   @type metric_type :: :counter | :sum | :last_value | :distribution
   @type metadata ::
-          :all | [key :: term()] | (Telemetry.event_metadata() -> Telemetry.event_metadata())
+          :all | [key :: term()] | (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type tag :: term()
   @type tags :: [tag()]
   @type description :: nil | String.t()
@@ -172,8 +172,8 @@ defmodule Telemetry.Metrics do
           __struct__: module(),
           name: normalized_metric_name(),
           type: metric_type(),
-          event_name: Telemetry.event_name(),
-          metadata: (Telemetry.event_metadata() -> Telemetry.event_metadata()),
+          event_name: :telemetry.event_name(),
+          metadata: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           tags: tags(),
           description: description(),
           unit: unit()
@@ -313,7 +313,7 @@ defmodule Telemetry.Metrics do
   # Helpers
 
   @spec validate_event_or_metric_name!(term()) ::
-          normalized_metric_name() | Telemetry.event_name() | no_return()
+          normalized_metric_name() | :telemetry.event_name() | no_return()
   defp validate_event_or_metric_name!(list) when is_list(list) do
     if Enum.all?(list, &is_atom/1) do
       list
@@ -432,7 +432,7 @@ defmodule Telemetry.Metrics do
   end
 
   @spec metadata_spec_to_function(metadata()) ::
-          (Telemetry.event_metadata() -> Telemetry.event_metadata())
+          (:telemetry.event_metadata() -> :telemetry.event_metadata())
   defp metadata_spec_to_function(:all), do: & &1
   defp metadata_spec_to_function([]), do: fn _ -> %{} end
   defp metadata_spec_to_function(keys) when is_list(keys), do: &Map.take(&1, keys)
