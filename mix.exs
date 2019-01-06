@@ -8,7 +8,8 @@ defmodule Telemetry.Metrics.MixProject do
       elixir: "~> 1.5",
       start_permanent: Mix.env() == :prod,
       preferred_cli_env: preferred_cli_env(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -21,7 +22,8 @@ defmodule Telemetry.Metrics.MixProject do
   defp preferred_cli_env do
     [
       docs: :docs,
-      dialyzer: :test
+      dialyzer: :test,
+      "coveralls.json": :test
     ]
   end
 
@@ -29,7 +31,8 @@ defmodule Telemetry.Metrics.MixProject do
     [
       {:telemetry, "~> 0.3"},
       {:ex_doc, "~> 0.19.0", only: :docs},
-      {:dialyxir, "~> 1.0.0-rc.3", only: :test, runtime: false}
+      {:dialyxir, "~> 1.0.0-rc.3", only: :test, runtime: false},
+      {:excoveralls, "~> 0.10.0", only: :test, runtime: false}
     ]
   end
 end

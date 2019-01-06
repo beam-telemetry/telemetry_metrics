@@ -23,6 +23,9 @@ orbs:
           otp:
             description: OTP release to used by the job
             type: string
+          codecov_flag:
+            description: String the coverage reports are grouped by
+            type: string
         executor:
           name: elixir
           elixir: <<parameters.elixir>>
@@ -40,8 +43,16 @@ orbs:
                 - deps-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
                 - deps-<<parameters.elixir>>-<<parameters.otp>>
           - run: mix deps.get
-          - run: mix test
+          - run: mix coveralls.json
           - run: mix dialyzer
+          - run:
+              name: Install curl
+              command: apk add --no-cache curl
+          - run:
+              name: Upload coverage report
+              command: |
+                bash <(curl -s https://codecov.io/bash) \
+                  -F <<parameters.codecov_flag>>
           - save_cache:
               key: dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
               paths:
@@ -58,15 +69,19 @@ workflows:
           name: "1.7-otp-21"
           elixir: "1.7.4"
           otp: "21"
+          codecov_flag: "1_7_otp21"
       - telemetry_metrics/build_and_test:
           name: "1.7-otp-19"
           elixir: "1.7.4"
           otp: "19"
+          codecov_flag: "1_7_otp19"
       - telemetry_metrics/build_and_test:
           name: "1.5-otp-20"
           elixir: "1.5.3"
           otp: "20"
+          codecov_flag: "1_5_otp20"
       - telemetry_metrics/build_and_test:
           name: "1.5-otp-18"
           elixir: "1.5.3"
-          otp: "20"
+          otp: "18"
+          codecov_flag: "1_5_otp18"
