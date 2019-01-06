@@ -1,0 +1,13 @@
+version: 2.1
+jobs:
+  build_and_test:
+    docker:
+      - image: arkgil/alpine-elixir:1.7.4-otp-21
+    steps:
+      - checkout
+      - run: echo "Hello, World!"
+
+workflows:
+  build_and_test:
+    jobs:
+      - build_and_test
