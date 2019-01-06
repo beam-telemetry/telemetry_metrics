@@ -1,13 +1,72 @@
 version: 2.1
-jobs:
-  build_and_test:
-    docker:
-      - image: arkgil/alpine-elixir:1.7.4-otp-21
-    steps:
-      - checkout
-      - run: echo "Hello, World!"
+
+orbs:
+  telemetry_metrics:
+    executors:
+      elixir:
+        parameters:
+          elixir:
+            description: Elixir version to used by the job
+            type: string
+          otp:
+            description: OTP release to used by the job
+            type: string
+        docker:
+          - image: arkgil/alpine-elixir:<<parameters.elixir>>-otp-<<parameters.otp>>
+
+    jobs:
+      build_and_test:
+        parameters:
+          elixir:
+            description: Elixir version to used by the job
+            type: string
+          otp:
+            description: OTP release to used by the job
+            type: string
+        executor:
+          name: elixir
+          elixir: <<parameters.elixir>>
+          otp: <<parameters.otp>>
+        steps:
+          - run: mix local.hex --force
+          - run: mix local.rebar --force
+          - checkout
+          - restore_cache:
+              keys:
+                - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
+                - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>
+          - restore_cache:
+              keys:
+                - deps-{{ checksum "mix.lock" }}
+                - deps
+          - run: mix deps.get
+          - run: mix test
+          - run: mix dialyzer
+          - save_cache:
+              key: dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
+              paths:
+              - _build
+          - save_cache:
+              key: deps-{{ checksum "mix.lock" }}
+              paths:
+              - deps
 
 workflows:
   build_and_test:
     jobs:
-      - build_and_test
+      - telemetry_metrics/build_and_test:
+          name: "1.7-otp-21"
+          elixir: "1.7.4"
+          otp: "21"
+      - telemetry_metrics/build_and_test:
+          name: "1.7-otp-19"
+          elixir: "1.7.4"
+          otp: "19"
+      - telemetry_metrics/build_and_test:
+          name: "1.5-otp-20"
+          elixir: "1.5.3"
+          otp: "20"
+      - telemetry_metrics/build_and_test:
+          name: "1.5-otp-18"
+          elixir: "1.5.3"
+          otp: "20"
