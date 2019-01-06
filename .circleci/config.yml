@@ -37,8 +37,8 @@ orbs:
                 - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>
           - restore_cache:
               keys:
-                - deps-{{ checksum "mix.lock" }}
-                - deps
+                - deps-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
+                - deps-<<parameters.elixir>>-<<parameters.otp>>
           - run: mix deps.get
           - run: mix test
           - run: mix dialyzer
@@ -47,7 +47,7 @@ orbs:
               paths:
               - _build
           - save_cache:
-              key: deps-{{ checksum "mix.lock" }}
+              key: deps-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
               paths:
               - deps
 
