@@ -171,7 +171,6 @@ defmodule Telemetry.Metrics do
   @type t :: %{
           __struct__: module(),
           name: normalized_metric_name(),
-          type: metric_type(),
           event_name: :telemetry.event_name(),
           metadata: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           tags: tags(),
