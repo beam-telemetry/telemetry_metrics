@@ -91,7 +91,7 @@ defmodule Telemetry.MetricsTest do
             tags: tags,
             description: description,
             unit: unit
-          ] ++  unquote(extra_options)
+          ] ++ unquote(extra_options)
 
         metric = apply(Metrics, unquote(metric_type), [event_name, options])
 
@@ -116,46 +116,94 @@ defmodule Telemetry.MetricsTest do
         assert [:http, :request] == metric.event_name
         assert [:http, :requests, :count] == metric.name
       end
-    end
-  end
 
-  test "setting :all as metadata returns identity function in metric spec" do
-    metric = Metrics.counter([:my, :event], metadata: :all)
-    metadata_fun = metric.metadata
-    event_metadata = %{controller: UserController, action: "create"}
+      test "setting :all as metadata returns identity function in metric spec" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            [:my, :event],
+            [metadata: :all] ++ unquote(extra_options)
+          ])
 
-    assert event_metadata == metadata_fun.(event_metadata)
-  end
+        metadata_fun = metric.metadata
+        event_metadata = %{controller: UserController, action: "create"}
 
-  test "setting list of terms as metadata returns function returning subset of a map in metric spec" do
-    metric = Metrics.counter([:my, :event], metadata: [:action])
-    metadata_fun = metric.metadata
-    event_metadata = %{controller: UserController, action: "create"}
+        assert event_metadata == metadata_fun.(event_metadata)
+      end
 
-    assert %{action: "create"} == metadata_fun.(event_metadata)
-  end
+      test "setting list of terms as metadata returns function returning subset of a map in metric spec" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            [:my, :event],
+            [metadata: [:action]] ++ unquote(extra_options)
+          ])
 
-  test "setting function as metadata returns that function in metric spec" do
-    metric = Metrics.counter([:my, :event], metadata: fn _ -> %{constant: "metadata"} end)
-    metadata_fun = metric.metadata
-    event_metadata = %{controller: UserController, action: "create"}
+        metadata_fun = metric.metadata
+        event_metadata = %{controller: UserController, action: "create"}
 
-    assert %{constant: "metadata"} == metadata_fun.(event_metadata)
-  end
+        assert %{action: "create"} == metadata_fun.(event_metadata)
+      end
 
-  test "setting metric name with leading, trailing or subsequent dots logs a warning" do
-    for metric_name <- [".metric", "metric.", "metric..name"] do
-      assert capture_log(fn ->
-               Metrics.counter([:my, :event], name: metric_name)
-             end) =~ "Event or metric name #{metric_name} contains"
-    end
-  end
+      test "setting function as metadata returns that function in metric spec" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            [:my, :event],
+            [metadata: fn _ -> %{constant: "metadata"} end] ++ unquote(extra_options)
+          ])
 
-  test "setting event name with leading, trailing or subsequent dots logs a warning" do
-    for event_name <- [".event", "event.", "event..name"] do
-      assert capture_log(fn ->
-               Metrics.counter(event_name, name: [:my, :metric])
-             end) =~ "Event or metric name #{event_name} contains"
+        metadata_fun = metric.metadata
+        event_metadata = %{controller: UserController, action: "create"}
+
+        assert %{constant: "metadata"} == metadata_fun.(event_metadata)
+      end
+
+      test "setting metric name with leading, trailing or subsequent dots logs a warning" do
+        for metric_name <- [".metric", "metric.", "metric..name"] do
+          assert capture_log(fn ->
+                   apply(Metrics, unquote(metric_type), [
+                     [:my, :event],
+                     [name: metric_name] ++ unquote(extra_options)
+                   ])
+                 end) =~ "Event or metric name #{metric_name} contains"
+        end
+      end
+
+      test "setting event name with leading, trailing or subsequent dots logs a warning" do
+        for event_name <- [".event", "event.", "event..name"] do
+          assert capture_log(fn ->
+                   apply(Metrics, unquote(metric_type), [
+                     event_name,
+                     [name: [:my, :metric]] ++ unquote(extra_options)
+                   ])
+                 end) =~ "Event or metric name #{event_name} contains"
+        end
+      end
+
+      test "setting tags and not metadata returns spec with metadata fun filtering only specified tags" do
+        tags = [:action]
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            [:my, :event],
+            [tags: tags] ++ unquote(extra_options)
+          ])
+
+        event_metadata = metric.metadata.(%{controller: UserController, action: :create})
+        assert tags == Map.keys(event_metadata)
+      end
+
+      test "metadata fun can leave other keys than tags" do
+        tags = [:action]
+        metadata = [:controller]
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            [:my, :event],
+            [tags: tags, metadata: metadata] ++ unquote(extra_options)
+          ])
+
+        event_metadata = metric.metadata.(%{controller: UserController, action: :create})
+        refute tags == Map.keys(event_metadata)
+      end
     end
   end
 

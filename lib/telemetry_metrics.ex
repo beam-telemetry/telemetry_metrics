@@ -91,8 +91,8 @@ defmodule Telemetry.Metrics do
     Defaults to event name given as first argument;
   * `:tags` - tags by which aggregations will be broken down. Defaults to an empty list;
   * `:metadata` - determines what part of event metadata is used as the source of tag values.
-    Default value is an empty list. Note that the specified metadata should contain at least those
-    keys which are set as `:tags`. There are three possible values of this option:
+    Default value is the value of `:tags` or empty list if `:tags` are not set. There are three
+    possible values of this option:
     * `:all` - all event metadata is used;
     * list of terms, e.g. `[:table, :kind]` - only these keys from the event metadata are used;
     * one argument function taking the event metadata and returning the metadata which should be
@@ -199,7 +199,7 @@ defmodule Telemetry.Metrics do
     event_name = validate_event_or_metric_name!(event_name)
     metric_name = validate_event_or_metric_name!(metric_name)
     validate_metric_options!(options)
-    options = Keyword.merge(default_metric_options(), options)
+    options = fill_in_default_metric_options(options)
 
     %Counter{
       name: metric_name,
@@ -227,7 +227,7 @@ defmodule Telemetry.Metrics do
     event_name = validate_event_or_metric_name!(event_name)
     metric_name = validate_event_or_metric_name!(metric_name)
     validate_metric_options!(options)
-    options = Keyword.merge(default_metric_options(), options)
+    options = fill_in_default_metric_options(options)
 
     %Sum{
       name: metric_name,
@@ -258,7 +258,7 @@ defmodule Telemetry.Metrics do
     event_name = validate_event_or_metric_name!(event_name)
     metric_name = validate_event_or_metric_name!(metric_name)
     validate_metric_options!(options)
-    options = Keyword.merge(default_metric_options(), options)
+    options = fill_in_default_metric_options(options)
 
     %LastValue{
       name: metric_name,
@@ -284,7 +284,6 @@ defmodule Telemetry.Metrics do
       distribution(
         "http.request",
         buckets: [100, 200, 300],
-        metadata: [:controller, :action],
         tags: [:controller, :action],
       )
   """
@@ -296,7 +295,7 @@ defmodule Telemetry.Metrics do
     buckets = Keyword.fetch!(options, :buckets)
     validate_distribution_buckets!(buckets)
     validate_metric_options!(options)
-    options = Keyword.merge(default_metric_options(), options)
+    options = fill_in_default_metric_options(options)
 
     %Distribution{
       name: metric_name,
@@ -341,6 +340,18 @@ defmodule Telemetry.Metrics do
     raise ArgumentError,
           "expected event or metric name to be a list of atoms or a string, " <>
             "got #{inspect(term)}"
+  end
+
+  @spec fill_in_default_metric_options([metric_option()]) :: [metric_option()]
+  defp fill_in_default_metric_options(options) do
+    options =
+      if Keyword.has_key?(options, :tags) and not Keyword.has_key?(options, :metadata) do
+        Keyword.put(options, :metadata, Keyword.fetch!(options, :tags))
+      else
+        options
+      end
+
+    Keyword.merge(default_metric_options(), options)
   end
 
   @spec default_metric_options() :: [metric_option()]
