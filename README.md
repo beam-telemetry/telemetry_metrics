@@ -50,6 +50,9 @@ we expect to find the following aggregations in the metric system we report to
 The way in which reporters aggregate or export this data is not in the scope of this project. Rather,
 a goal is to define a standardized set of aggregations that will be supported by reporters.
 
+See the documentation for [Telemetry.Metrics module](https://hexdocs.pm/telemetry_metrics/0.1.0/Telemetry.Metrics.html)
+for more details.
+
 ## Copyright and License
 
 Telemetry.Metrics is copyright (c) 2018 Chris McCord and Erlang Solutions.
