@@ -89,8 +89,8 @@ defmodule Telemetry.Metrics do
 
   * `:name` - the metric name. Metric name can be represented in the same way as event name.
     Defaults to event name given as first argument;
-  * `:metadata` - determines part of the event metadata to be published to the external source.
-    It defaults to an empty list. It accepts three possible values:
+  * `:metadata` - determines part of the event metadata to be published to supported external
+    sources. It defaults to an empty list. It accepts three possible values:
     * `:all` - all event metadata is pushed;
     * list of keys, e.g. `[:table, :kind]` - only these keys from the event metadata are used;
     * one argument function that takes the event metadata and returns the new metadata;
