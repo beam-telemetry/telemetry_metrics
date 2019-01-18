@@ -89,14 +89,14 @@ defmodule Telemetry.Metrics do
 
   * `:name` - the metric name. Metric name can be represented in the same way as event name.
     Defaults to event name given as first argument;
-  * `:tags` - tags by which aggregations will be broken down. Defaults to an empty list;
-  * `:metadata` - determines what part of event metadata is used as the source of tag values.
-    Default value is the value of `:tags` or empty list if `:tags` are not set. There are three
-    possible values of this option:
-    * `:all` - all event metadata is used;
-    * list of terms, e.g. `[:table, :kind]` - only these keys from the event metadata are used;
-    * one argument function taking the event metadata and returning the metadata which should be
-      used to generate tag values
+  * `:metadata` - determines part of the event metadata to be published to the external source.
+    It defaults to an empty list. It accepts three possible values:
+    * `:all` - all event metadata is pushed;
+    * list of keys, e.g. `[:table, :kind]` - only these keys from the event metadata are used;
+    * one argument function that takes the event metadata and returns the new metadata;
+  * `:tags` - a subset of metadata keys by which aggregations will be broken down. If `:tags`
+    are set but `:metadata` isn't, then `:metadata` is set to the same value as `:tags` for
+    convenience. Defaults to an empty list;
   * `:description` - human-readable description of the metric. Might be used by reporters for
     documentation purposes. Defaults to `nil`;
   * `:unit` - an atom describing the unit of event values. Might be used by reporters for
@@ -113,18 +113,20 @@ defmodule Telemetry.Metrics do
 
   The design proposed by `Telemetry.Metrics` might look controversial - unlike most of the libraries
   available on the BEAM, it doesn't aggregate metrics itself, it merely defines what users should
-  expect when using the reporters. There are two arguments for this solution.
-  if `Telemetry.Metrics` would aggregate metrics, the way those aggregations work would be imposed
+  expect when using the reporters.
+
+  If `Telemetry.Metrics` would aggregate metrics, the way those aggregations work would be imposed
   on the system where the metrics are published to. For example, counters in StatsD are reset on
   every flush and can be decremented, whereas counters in Prometheus are monotonically increasing.
   `Telemetry.Metrics` doesn't focus on those details - instead, it describes what the end user,
   operator, expects to see when using the metric of particular type. This implies that in most
   cases aggregated metrics won't be visible inside the BEAM, but in exchange aggregations can be
-  implemented in a way that makes most sense for particular system. Finally, one could also
-  implement an in-VM "reporter" which would aggregate the metrics and expose them inside the BEAM.
-  When there is a need to swap the reporters, and if both reporters are following the metric types
-  specification, then the end result of aggregation is the same, regardless of the backend system
-  in use.
+  implemented in a way that makes most sense for particular system.
+
+  Finally, one could also implement an in-VM "reporter" which would aggregate the metrics and expose
+  them inside the BEAM. When there is a need to swap the reporters, and if both reporters are
+  following the metric types specification, then the end result of aggregation is the same,
+  regardless of the backend system in use.
 
   ### Requirements for reporters
 
@@ -136,6 +138,11 @@ defmodule Telemetry.Metrics do
 
   Reporters should also document how `Telemetry.Metrics` metric types, names tags are translated to
   metric types and identifiers in the system they publish metrics to.
+
+  We recommend reporters to subscribe to those events in a process that also removes the installed
+  subscriptions on shutdown. This can be done by trapping exists and implementing the terminate
+  callback. It is very important that the code executed on every event does not fail, as that would
+  cause the handler to be permanently removed.
   """
 
   require Logger
