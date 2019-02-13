@@ -17,26 +17,26 @@ would construct the following metric specification:
 
 ```elixir
 Telemetry.Metrics.counter(
-  "db.query",
-  name: "db.query.count",
+  "db.query:count",
   tags: [:table, :query_type]
 )
 ```
 
 This specification means that:
 
-* metric should count the number of times a `[:db, :query]` event has been emitted, regardless of
-  event value
+* metric should count the number of times a `[:db, :query]` event has been emitted. `count` means
+  that the metric should be based on `:count` measurement values, but it's not relevant for the
+  counter metric
 * the name of the metric is `[:db, :query, :count]`
 * the count should be broken down by each unique `:table`/`:query_type` pair found in event metadata
 
 Now when we provide such specification to the reporter and emit following events
 
 ```elixir
-:telemetry.execute([:db, :query], 32, %{table: "users", query_type: "select"})
-:telemetry.execute([:db, :query], 67, %{table: "users", query_type: "insert"})
-:telemetry.execute([:db, :query], 18, %{table: "users", query_type: "select"})
-:telemetry.execute([:db, :query], 15, %{table: "users", query_type: "select"})
+:telemetry.execute([:db, :query], %{total: 62}, %{table: "users", query_type: "select"})
+:telemetry.execute([:db, :query], %{total: 67}, %{table: "users", query_type: "insert"})
+:telemetry.execute([:db, :query], %{total: 18}, %{table: "users", query_type: "select"})
+:telemetry.execute([:db, :query], %{total: 15}, %{table: "users", query_type: "select"})
 ```
 
 we expect to find the following aggregations in the metric system we report to

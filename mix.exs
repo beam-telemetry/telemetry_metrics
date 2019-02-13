@@ -18,6 +18,15 @@ defmodule Telemetry.Metrics.MixProject do
     ]
   end
 
+  # Measurement nie musi być dla kazdego
+  # - counter - nie potrzebuje
+  # - gauge - potrzebuje
+  # - distribution - potrzebuje
+  # - sum - potrzebuje
+  #
+  # Ale ze względu na to, ze to jest common case, to powinnismy wspierac
+  # to w tej skladni skroconej. A reportery powinny zakładać, 
+
   def application do
     [
       extra_applications: [:logger]
@@ -34,7 +43,7 @@ defmodule Telemetry.Metrics.MixProject do
 
   defp deps do
     [
-      {:telemetry, "~> 0.3"},
+      {:telemetry, "~> 0.4"},
       {:ex_doc, "~> 0.19.0", only: :docs},
       {:dialyxir, "~> 1.0.0-rc.3", only: :test, runtime: false},
       {:excoveralls, "~> 0.10.0", only: :test, runtime: false}

@@ -5,7 +5,7 @@ defmodule Telemetry.Metrics.Distribution do
 
   alias Telemetry.Metrics
 
-  defstruct [:name, :event_name, :metadata, :tags, :buckets, :description, :unit]
+  defstruct [:name, :event_name, :measurement, :metadata, :tags, :buckets, :description, :unit]
 
   @typedoc """
   Distribution metric bucket boundaries.
@@ -25,6 +25,7 @@ defmodule Telemetry.Metrics.Distribution do
   @type t :: %__MODULE__{
           name: Metrics.normalized_metric_name(),
           event_name: :telemetry.event_name(),
+          measurement: (:telemetry.event_measurements() -> number()),
           metadata: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           tags: Metrics.tags(),
           buckets: buckets(),

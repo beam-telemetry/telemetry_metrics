@@ -21,10 +21,10 @@ defmodule Telemetry.Metrics do
   application. On each request, you might emit an event with the name of the controller and action
   handling that request, e.g.:
 
-      :telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "index"})
-      :telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "index"})
-      :telemetry.execute([:http, :request], 1, %{controller: "user_controller", action: "create"})
-      :telemetry.execute([:http, :request], 1, %{controller: "product_controller", action: "get"})
+      :telemetry.execute([:http, :request], %{latency: 227}, %{controller: "user_controller", action: "index"})
+      :telemetry.execute([:http, :request], %{latency: 128}, %{controller: "user_controller", action: "index"})
+      :telemetry.execute([:http, :request], %{latency: 271}, %{controller: "user_controller", action: "create"})
+      :telemetry.execute([:http, :request], %{latency: 121}, %{controller: "product_controller", action: "get"})
 
   With multi-dimensional data model, the result of aggregating those events by `:controller` and
   `:action` tags would look like this:
@@ -77,9 +77,23 @@ defmodule Telemetry.Metrics do
 
   Metric specifications are created using one of the four functions: `counter/2`, `sum/2`,
   `last_value/2` and `distribution/2`. Each of those functions returns a specification of metric
-  of the corresponding type. The first argument to all these functions is the name of events which
+  of the corresponding type.
+
+  The first argument to all these functions is the metric source. Metric source may take three
+  different shapes:
+  * a string representing an event name and a measurement, e.g. `"http.request:latency"`. In this
+    case, the metric is based on `[:http, :request]` events and `:latency` measurement;
+  * a string representing an event name, e.g. `"http.request"`. In this case, `:measurement` needs
+    to be provided additionally in a list of metric options;
+  * a list of atoms representing an event name, e.g. `[:http, :request]`. The same as in the previous
+    example, measaurement needs to be provided in the list of metric options.
   are aggregated by the metric. Event name might be represented as in Telemetry, i.e. as a list of
   atoms (`[:http, :request]`), or as a string of words joined by dots (`"http.request"`).
+
+  Measurement is always required, either as a part of a metric source string or provided additionally
+  in the list of metric options. Without it it wouldn't be possible to aggregate metrics correctly,
+  since Telemetry events carry multiple measurements at once (an exception here is a counter metric,
+  but measurement is required for it anyway for the sake of consistency).
 
   > Note: do not use data from external sources as metric or event names! Since they are converted
   > to atoms, your application becomes vulnerable to atom leakage and might run out of memory.
@@ -87,8 +101,14 @@ defmodule Telemetry.Metrics do
   The second argument is a list of options. Below is the description of the options common to all
   metric types:
 
-  * `:name` - the metric name. Metric name can be represented in the same way as event name.
-    Defaults to event name given as first argument;
+  * `:name` - the metric name. Metric name can be represented either as a string (e.g.
+    `"http.request.count"`) or a list of atoms (`[:http, :request, :count]`). By default the metric
+      name is based on the metric source, i.e.:
+        * metric sources in the shape of `"event.name:measurement"` result in metric names like
+          `[:event, :name, :measurement]`;
+        * metric sources in the shape of `"event.name"` result in metric names like `[:event, :name]`;
+        * metric sources in the shape of `[:event, :name]` result in metric names like
+        `[:event, :name]`;
   * `:metadata` - determines part of the event metadata to be published to supported external
     sources. It defaults to an empty list. It accepts three possible values:
     * `:all` - all event metadata is pushed;
@@ -149,10 +169,22 @@ defmodule Telemetry.Metrics do
 
   alias Telemetry.Metrics.{Counter, Sum, LastValue, Distribution}
 
-  @type event_name :: String.t() | :telemetry.event_name()
+  @typedoc """
+  Source event name (and optionally measurement) of the metric.
+  """
+  @type metric_source :: String.t() | :telemetry.event_name()
+
+  @typedoc """
+  The name of the metric, either as string or a list of atoms.
+  """
   @type metric_name :: String.t() | normalized_metric_name()
+
+  @typedoc """
+  The name of the metric represented as a list of atoms.
+  """
   @type normalized_metric_name :: [atom(), ...]
-  @type metric_type :: :counter | :sum | :last_value | :distribution
+
+  @type measurement :: term() | (:telemetry.event_measurement() -> number())
   @type metadata ::
           :all | [key :: term()] | (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type tag :: term()
@@ -165,6 +197,7 @@ defmodule Telemetry.Metrics do
   @type distribution_options :: [metric_option() | {:buckets, Distribution.buckets()}]
   @type metric_option ::
           {:name, metric_name()}
+          | {:measurement, measurement()}
           | {:metadata, metadata()}
           | {:tags, tags()}
           | {:description, description()}
@@ -178,6 +211,7 @@ defmodule Telemetry.Metrics do
   @type t :: %{
           __struct__: module(),
           name: normalized_metric_name(),
+          measurement: (:telemetry.event_measurements() -> number()),
           event_name: :telemetry.event_name(),
           metadata: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           tags: tags(),
@@ -196,21 +230,24 @@ defmodule Telemetry.Metrics do
   ## Example
 
       counter(
-        "http.request",
+        "http.request:count",
         metadata: [:controller, :action] tags: [:controller, :action]
       )
   """
-  @spec counter(event_name(), counter_options()) :: Counter.t()
-  def counter(event_name, options \\ []) do
-    {metric_name, options} = Keyword.pop(options, :name, event_name)
-    event_name = validate_event_or_metric_name!(event_name)
-    metric_name = validate_event_or_metric_name!(metric_name)
+  @spec counter(metric_source(), counter_options()) :: Counter.t()
+  def counter(metric_source, options \\ []) do
+    {event_name, maybe_measurement} = parse_metric_source!(metric_source)
+    metric_name = metric_source_to_metric_name(event_name, maybe_measurement)
+    {metric_name, options} = Keyword.pop(options, :name, metric_name)
+    metric_name = validate_metric_name!(metric_name)
+    measurement = validate_measurement!(maybe_measurement, options)
     validate_metric_options!(options)
     options = fill_in_default_metric_options(options)
 
     %Counter{
       name: metric_name,
       event_name: event_name,
+      measurement: measurement_spec_to_function(measurement),
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
@@ -226,19 +263,22 @@ defmodule Telemetry.Metrics do
 
   ## Example
 
-      sum("user.session_count.change", name: "user.session_count", metadata: [:role], tags: [:role])
+      sum("user.session_count:delta", name: "user.session_count", metadata: [:role], tags: [:role])
   """
-  @spec sum(event_name(), sum_options()) :: Sum.t()
-  def sum(event_name, options \\ []) do
-    {metric_name, options} = Keyword.pop(options, :name, event_name)
-    event_name = validate_event_or_metric_name!(event_name)
-    metric_name = validate_event_or_metric_name!(metric_name)
+  @spec sum(metric_source(), sum_options()) :: Sum.t()
+  def sum(metric_source, options \\ []) do
+    {event_name, maybe_measurement} = parse_metric_source!(metric_source)
+    metric_name = metric_source_to_metric_name(event_name, maybe_measurement)
+    {metric_name, options} = Keyword.pop(options, :name, metric_name)
+    metric_name = validate_metric_name!(metric_name)
+    measurement = validate_measurement!(maybe_measurement, options)
     validate_metric_options!(options)
     options = fill_in_default_metric_options(options)
 
     %Sum{
       name: metric_name,
       event_name: event_name,
+      measurement: measurement_spec_to_function(measurement),
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
@@ -255,21 +295,24 @@ defmodule Telemetry.Metrics do
   ## Example
 
       last_value(
-        "vm.memory.total",
+        "vm.memory:total",
         description: "Total amount of memory allocated by the Erlang VM", unit: :byte
       )
   """
-  @spec last_value(event_name(), last_value_options()) :: LastValue.t()
-  def last_value(event_name, options \\ []) do
-    {metric_name, options} = Keyword.pop(options, :name, event_name)
-    event_name = validate_event_or_metric_name!(event_name)
-    metric_name = validate_event_or_metric_name!(metric_name)
+  @spec last_value(metric_source(), last_value_options()) :: LastValue.t()
+  def last_value(metric_source, options \\ []) do
+    {event_name, maybe_measurement} = parse_metric_source!(metric_source)
+    metric_name = metric_source_to_metric_name(event_name, maybe_measurement)
+    {metric_name, options} = Keyword.pop(options, :name, metric_name)
+    metric_name = validate_metric_name!(metric_name)
+    measurement = validate_measurement!(maybe_measurement, options)
     validate_metric_options!(options)
     options = fill_in_default_metric_options(options)
 
     %LastValue{
       name: metric_name,
       event_name: event_name,
+      measurement: measurement_spec_to_function(measurement),
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
@@ -289,16 +332,18 @@ defmodule Telemetry.Metrics do
   ## Example
 
       distribution(
-        "http.request",
+        "http.request:latency",
         buckets: [100, 200, 300],
         tags: [:controller, :action],
       )
   """
-  @spec distribution(event_name(), distribution_options()) :: Distribution.t()
-  def distribution(event_name, options) do
-    {metric_name, options} = Keyword.pop(options, :name, event_name)
-    event_name = validate_event_or_metric_name!(event_name)
-    metric_name = validate_event_or_metric_name!(metric_name)
+  @spec distribution(metric_source(), distribution_options()) :: Distribution.t()
+  def distribution(metric_source, options) do
+    {event_name, maybe_measurement} = parse_metric_source!(metric_source)
+    metric_name = metric_source_to_metric_name(event_name, maybe_measurement)
+    {metric_name, options} = Keyword.pop(options, :name, metric_name)
+    metric_name = validate_metric_name!(metric_name)
+    measurement = validate_measurement!(maybe_measurement, options)
     buckets = Keyword.fetch!(options, :buckets)
     validate_distribution_buckets!(buckets)
     validate_metric_options!(options)
@@ -307,6 +352,7 @@ defmodule Telemetry.Metrics do
     %Distribution{
       name: metric_name,
       event_name: event_name,
+      measurement: measurement_spec_to_function(measurement),
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       buckets: buckets,
@@ -317,36 +363,91 @@ defmodule Telemetry.Metrics do
 
   # Helpers
 
-  @spec validate_event_or_metric_name!(term()) ::
-          normalized_metric_name() | :telemetry.event_name() | no_return()
-  defp validate_event_or_metric_name!(list) when is_list(list) do
-    if Enum.all?(list, &is_atom/1) do
-      list
+  @spec parse_metric_source!(term()) ::
+          {:telemetry.event_name(), measurement :: atom() | nil}
+  defp parse_metric_source!(metric_source) when is_list(metric_source) do
+    if Enum.all?(metric_source, &is_atom/1) do
+      {metric_source, nil}
     else
       raise ArgumentError,
-            "expected event or metric name to be a list of atoms or a string, " <>
-              "got #{inspect(list)}"
+            "expected metric source to be a list of atoms or a string, got #{
+              inspect(metric_source)
+            }"
     end
   end
 
-  defp validate_event_or_metric_name!(event_or_metric_name)
-       when is_binary(event_or_metric_name) do
-    segments = String.split(event_or_metric_name, ".")
+  defp parse_metric_source!(metric_source) when is_binary(metric_source) do
+    case String.split(metric_source, ":") do
+      [event_name] when event_name != "" ->
+        {parse_event_name!(event_name), nil}
+
+      [event_name, measurement] when event_name != "" and measurement != "" ->
+        {parse_event_name!(event_name), String.to_atom(measurement)}
+
+      _ ->
+        raise ArgumentError,
+              "expected metric source to be a non-empty event name and non-empty " <>
+                "measurement joined with a colon (.e.g \"event.name:measurement\"), got #{
+                  inspect(metric_source)
+                }"
+    end
+  end
+
+  defp parse_metric_source!(metric_source) do
+    raise ArgumentError,
+          "expected metric source to be a string or a list of atoms, " <>
+            "got #{inspect(metric_source)}"
+  end
+
+  @spec parse_event_name!(term()) :: :telemetry.event_name()
+  defp parse_event_name!(event_name)
+       when is_binary(event_name) and event_name != "" do
+    segments = String.split(event_name, ".")
 
     if Enum.any?(segments, &(&1 == "")) do
       Logger.warn(fn ->
-        "Event or metric name #{event_or_metric_name} contains leading, trailing or " <>
-          "consecutive dots"
+        "event name #{event_name} contains leading, trailing or consecutive dots"
       end)
     end
 
     Enum.map(segments, &String.to_atom/1)
   end
 
-  defp validate_event_or_metric_name!(term) do
+  defp parse_event_name!(term) do
     raise ArgumentError,
-          "expected event or metric name to be a list of atoms or a string, " <>
-            "got #{inspect(term)}"
+          "expected event name to be a non-empty string, got #{inspect(term)}"
+  end
+
+  @spec metric_source_to_metric_name(:telemetry.event_name(), measurement :: atom() | nil) ::
+          normalized_metric_name()
+  defp metric_source_to_metric_name(event_name, nil), do: event_name
+  defp metric_source_to_metric_name(event_name, measurement), do: event_name ++ [measurement]
+
+  @spec validate_metric_name!(term()) :: normalized_metric_name()
+  defp validate_metric_name!(metric_name) when is_list(metric_name) do
+    if Enum.all?(metric_name, &is_atom/1) do
+      metric_name
+    else
+      raise ArgumentError,
+            "expected metric name to be a list of atoms or a string, got #{inspect(metric_name)}"
+    end
+  end
+
+  defp validate_metric_name!(metric_name) when is_binary(metric_name) do
+    segments = String.split(metric_name, ".")
+
+    if Enum.any?(segments, &(&1 == "")) do
+      Logger.warn(fn ->
+        "metric name #{metric_name} contains leading, trailing or consecutive dots"
+      end)
+    end
+
+    Enum.map(segments, &String.to_atom/1)
+  end
+
+  defp validate_metric_name!(term) do
+    raise ArgumentError,
+          "expected metric name to be a string or a list of atoms, got #{inspect(term)}"
   end
 
   @spec fill_in_default_metric_options([metric_option()]) :: [metric_option()]
@@ -377,6 +478,17 @@ defmodule Telemetry.Metrics do
     if tags = Keyword.get(options, :tags), do: validate_tags!(tags)
     if description = Keyword.get(options, :description), do: validate_description!(description)
     if unit = Keyword.get(options, :unit), do: validate_unit!(unit)
+  end
+
+  @spec validate_measurement!(atom() | nil, Keyword.t()) :: :ok | no_return()
+  defp validate_measurement!(maybe_measurement, options) do
+    case Keyword.fetch(options, :measurement) do
+      {:ok, measurement} ->
+        measurement
+
+      _ ->
+        maybe_measurement || raise ArgumentError, "expected measurement to be set, either in metric source or options"
+    end
   end
 
   @spec validate_metadata!(term()) :: :ok | no_return()
@@ -454,4 +566,9 @@ defmodule Telemetry.Metrics do
   defp metadata_spec_to_function([]), do: fn _ -> %{} end
   defp metadata_spec_to_function(keys) when is_list(keys), do: &Map.take(&1, keys)
   defp metadata_spec_to_function(fun), do: fun
+
+  @spec measurement_spec_to_function(measurement()) ::
+          (:telemetry.event_measurement() -> number())
+  defp measurement_spec_to_function(fun) when is_function(fun, 1), do: fun
+  defp measurement_spec_to_function(term), do: &Map.get(&1, term, 0)
 end
