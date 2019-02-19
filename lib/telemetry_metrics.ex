@@ -81,17 +81,16 @@ defmodule Telemetry.Metrics do
 
   The first argument to all these functions is the metric source. Metric source may take three
   different shapes:
-  * a string representing an event name and a measurement, e.g. `"http.request:latency"`. In this
-    case, the metric is based on `[:http, :request]` events and `:latency` measurement;
-  * a string representing an event name, e.g. `"http.request"`. In this case, `:measurement` needs
-    to be provided additionally in a list of metric options;
-  * a list of atoms representing an event name, e.g. `[:http, :request]`. The same as in the previous
-    example, measaurement needs to be provided in the list of metric options.
-  are aggregated by the metric. Event name might be represented as in Telemetry, i.e. as a list of
-  atoms (`[:http, :request]`), or as a string of words joined by dots (`"http.request"`).
+
+    * a string representing an event name and a measurement, e.g. `"http.request:latency"`. In this
+      case, the metric is based on `[:http, :request]` events and `:latency` measurement;
+    * a string representing an event name, e.g. `"http.request"`. In this case, `:measurement` needs
+      to be provided additionally in a list of metric options;
+    * a list of atoms representing an event name, e.g. `[:http, :request]`. The same as in the previous
+      example, measurement needs to be provided in the list of metric options.
 
   Measurement is always required, either as a part of a metric source string or provided additionally
-  in the list of metric options. Without it it wouldn't be possible to aggregate metrics correctly,
+  in the list of metric options. Without it, it wouldn't be possible to aggregate metrics correctly,
   since Telemetry events carry multiple measurements at once (an exception here is a counter metric,
   but measurement is required for it anyway for the sake of consistency).
 
