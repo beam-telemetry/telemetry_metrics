@@ -18,15 +18,6 @@ defmodule Telemetry.Metrics.MixProject do
     ]
   end
 
-  # Measurement nie musi być dla kazdego
-  # - counter - nie potrzebuje
-  # - gauge - potrzebuje
-  # - distribution - potrzebuje
-  # - sum - potrzebuje
-  #
-  # Ale ze względu na to, ze to jest common case, to powinnismy wspierac
-  # to w tej skladni skroconej. A reportery powinny zakładać, 
-
   def application do
     [
       extra_applications: [:logger]
