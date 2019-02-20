@@ -65,10 +65,9 @@ defmodule Telemetry.MetricsTest do
         assert [] == metric.tags
         assert nil == metric.description
         assert :unit == metric.unit
+        assert :latency = metric.measurement
         metadata_fun = metric.metadata
         assert %{} == metadata_fun.(%{key: 1, another_key: 2})
-        measurement_fun = metric.measurement
-        assert 3 == measurement_fun.(%{latency: 3, other_value: 2})
       end
 
       test "returns #{metric_type} specification with overriden fields" do
@@ -97,13 +96,10 @@ defmodule Telemetry.MetricsTest do
         assert tags == metric.tags
         assert description == metric.description
         assert unit == metric.unit
+        assert :other_value = metric.measurement
         metadata_fun = metric.metadata
-        measurement_fun = metric.measurement
-
         assert %{"action" => "create"} ==
                  metadata_fun.(%{:controller => UserController, "action" => "create"})
-
-        assert 2 == measurement_fun.(%{value: 3, other_value: 2})
       end
 
       test "return normalized metric and event name in the specification" do
@@ -159,22 +155,22 @@ defmodule Telemetry.MetricsTest do
       test "using metric name with leading, trailing or subsequent dots raises" do
         for name <- [".metric.name", "metric.name.", "metric..name"] do
           assert_raise ArgumentError, fn ->
-                   apply(Metrics, unquote(metric_type), [
-                     name,
-                     unquote(extra_options)
-                   ])
-                 end
+            apply(Metrics, unquote(metric_type), [
+              name,
+              unquote(extra_options)
+            ])
+          end
         end
       end
 
       test "using event name with leading, trailing or subsequent dots raises" do
         for event_name <- [".event.value", "event.value.", "event..name"] do
           assert_raise ArgumentError, fn ->
-                   apply(Metrics, unquote(metric_type), [
-                     "my.metric",
-                     [event_name: event_name] ++ unquote(extra_options)
-                   ])
-                 end
+            apply(Metrics, unquote(metric_type), [
+              "my.metric",
+              [event_name: event_name] ++ unquote(extra_options)
+            ])
+          end
         end
       end
 
@@ -212,10 +208,7 @@ defmodule Telemetry.MetricsTest do
             [measurement: :value] ++ unquote(extra_options)
           ])
 
-        measurement_fun = metric.measurement
-        event_measurements = %{value: 3, other_value: 2}
-
-        assert 3 == measurement_fun.(event_measurements)
+        assert :value == metric.measurement
       end
 
       test "setting function as measurement returns that function in metric spec" do
@@ -240,9 +233,7 @@ defmodule Telemetry.MetricsTest do
 
         assert [:my, :event, :value] == metric.name
         assert [:my, :event] == metric.event_name
-        measurement_fun = metric.measurement
-        event_measurements = %{value: 3, other_value: 2}
-        assert 3 == measurement_fun.(event_measurements)
+        assert :value == metric.measurement
       end
 
       test "metric name can be a string" do
@@ -254,9 +245,7 @@ defmodule Telemetry.MetricsTest do
 
         assert [:my, :event, :value] == metric.name
         assert [:my, :event] == metric.event_name
-        measurement_fun = metric.measurement
-        event_measurements = %{value: 3, other_value: 2}
-        assert 3 == measurement_fun.(event_measurements)
+        assert :value = metric.measurement
       end
 
       test "raises when metric name is empty" do

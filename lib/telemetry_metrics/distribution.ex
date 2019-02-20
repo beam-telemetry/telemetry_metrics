@@ -25,7 +25,7 @@ defmodule Telemetry.Metrics.Distribution do
   @type t :: %__MODULE__{
           name: Metrics.normalized_metric_name(),
           event_name: :telemetry.event_name(),
-          measurement: (:telemetry.event_measurements() -> number()),
+          measurement: Metrics.measurement(),
           metadata: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           tags: Metrics.tags(),
           buckets: buckets(),

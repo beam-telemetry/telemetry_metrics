@@ -195,7 +195,7 @@ defmodule Telemetry.Metrics do
   @type t :: %{
           __struct__: module(),
           name: normalized_metric_name(),
-          measurement: (:telemetry.event_measurements() -> number()),
+          measurement: measurement(),
           event_name: :telemetry.event_name(),
           metadata: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           tags: tags(),
@@ -231,7 +231,7 @@ defmodule Telemetry.Metrics do
     %Counter{
       name: metric_name,
       event_name: event_name,
-      measurement: measurement_spec_to_function(measurement),
+      measurement: measurement,
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
@@ -268,7 +268,7 @@ defmodule Telemetry.Metrics do
     %Sum{
       name: metric_name,
       event_name: event_name,
-      measurement: measurement_spec_to_function(measurement),
+      measurement: measurement,
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
@@ -302,7 +302,7 @@ defmodule Telemetry.Metrics do
     %LastValue{
       name: metric_name,
       event_name: event_name,
-      measurement: measurement_spec_to_function(measurement),
+      measurement: measurement,
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       description: Keyword.fetch!(options, :description),
@@ -342,7 +342,7 @@ defmodule Telemetry.Metrics do
     %Distribution{
       name: metric_name,
       event_name: event_name,
-      measurement: measurement_spec_to_function(measurement),
+      measurement: measurement,
       metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
       buckets: buckets,
@@ -354,7 +354,8 @@ defmodule Telemetry.Metrics do
   # Helpers
 
   @spec validate_metric_or_event_name!(term()) :: [atom(), ...]
-  defp validate_metric_or_event_name!(metric_or_event_name) when metric_or_event_name == [] or metric_or_event_name == "" do
+  defp validate_metric_or_event_name!(metric_or_event_name)
+       when metric_or_event_name == [] or metric_or_event_name == "" do
     raise ArgumentError, "metric or event name can't be empty"
   end
 
@@ -374,9 +375,11 @@ defmodule Telemetry.Metrics do
     segments = String.split(metric_or_event_name, ".")
 
     if Enum.any?(segments, &(&1 == "")) do
-        raise ArgumentError, "metric or event name #{metric_or_event_name} contains leading, " <>
-        "trailing or consecutive dots"
+      raise ArgumentError,
+            "metric or event name #{metric_or_event_name} contains leading, " <>
+              "trailing or consecutive dots"
     end
+
     Enum.map(segments, &String.to_atom/1)
   end
 
@@ -490,9 +493,4 @@ defmodule Telemetry.Metrics do
   defp metadata_spec_to_function([]), do: fn _ -> %{} end
   defp metadata_spec_to_function(keys) when is_list(keys), do: &Map.take(&1, keys)
   defp metadata_spec_to_function(fun), do: fun
-
-  @spec measurement_spec_to_function(measurement()) ::
-          (:telemetry.event_measurement() -> number())
-  defp measurement_spec_to_function(fun) when is_function(fun, 1), do: fun
-  defp measurement_spec_to_function(term), do: &Map.get(&1, term, 0)
 end
