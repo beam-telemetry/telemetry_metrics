@@ -1,8 +1,6 @@
 defmodule Telemetry.MetricsTest do
   use ExUnit.Case
 
-  import ExUnit.CaptureLog
-
   alias Telemetry.Metrics
 
   # Tests common to all metric types.
@@ -158,25 +156,25 @@ defmodule Telemetry.MetricsTest do
         assert %{constant: "metadata"} == metadata_fun.(event_metadata)
       end
 
-      test "using metric name with leading, trailing or subsequent dots logs a warning" do
+      test "using metric name with leading, trailing or subsequent dots raises" do
         for name <- [".metric.name", "metric.name.", "metric..name"] do
-          assert capture_log(fn ->
+          assert_raise ArgumentError, fn ->
                    apply(Metrics, unquote(metric_type), [
                      name,
                      unquote(extra_options)
                    ])
-                 end) =~ "metric or event name #{name} contains"
+                 end
         end
       end
 
-      test "using event name with leading, trailing or subsequent dots in event name logs a warning" do
+      test "using event name with leading, trailing or subsequent dots raises" do
         for event_name <- [".event.value", "event.value.", "event..name"] do
-          assert capture_log(fn ->
+          assert_raise ArgumentError, fn ->
                    apply(Metrics, unquote(metric_type), [
                      "my.metric",
                      [event_name: event_name] ++ unquote(extra_options)
                    ])
-                 end) =~ "metric or event name #{event_name} contains"
+                 end
         end
       end
 

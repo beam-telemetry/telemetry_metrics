@@ -374,14 +374,10 @@ defmodule Telemetry.Metrics do
     segments = String.split(metric_or_event_name, ".")
 
     if Enum.any?(segments, &(&1 == "")) do
-      Logger.warn(fn ->
-        "metric or event name #{metric_or_event_name} contains leading, trailing or consecutive dots"
-      end)
+        raise ArgumentError, "metric or event name #{metric_or_event_name} contains leading, " <>
+        "trailing or consecutive dots"
     end
-
-    segments
-    |> Enum.filter(fn s -> s != "" end)
-    |> Enum.map(&String.to_atom/1)
+    Enum.map(segments, &String.to_atom/1)
   end
 
   defp validate_metric_or_event_name!(term) do
