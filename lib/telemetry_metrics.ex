@@ -168,7 +168,7 @@ defmodule Telemetry.Metrics do
   """
   @type normalized_metric_name :: [atom(), ...]
 
-  @type measurement :: term() | (:telemetry.event_measurement() -> number())
+  @type measurement :: term() | (:telemetry.event_measurements() -> number())
   @type metadata ::
           :all | [key :: term()] | (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type tag :: term()
