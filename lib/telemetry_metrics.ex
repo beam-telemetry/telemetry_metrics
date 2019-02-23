@@ -93,21 +93,18 @@ defmodule Telemetry.Metrics do
 
     * `:event_name` - the source event name. Can be represented either as a string (e.g.
       `"http.request"`) or a list of atoms (`[:http, :request]`). By default the event name is all but
-      the last segment of the metric name;
+      the last segment of the metric name.
     * `:measurement` - the event measurement used as a source of a metric values. By default it is
       the last segment of the metric name. It can be either an arbitrary term, a key in the event's
       measurements map, or a function accepting the whole measurements map and returning the actual
-      value to be used;
-    * `:metadata` - determines part of the event metadata to be published to supported external
-      sources. It defaults to an empty list. It accepts three possible values:
-      * `:all` - all event metadata is pushed;
-      * list of keys, e.g. `[:table, :kind]` - only these keys from the event metadata are used;
-      * one argument function that takes the event metadata and returns the new metadata;
-    * `:tags` - a subset of metadata keys by which aggregations will be broken down. If `:tags`
+      value to be used.
+      * `:tags` - a subset of metadata keys by which aggregations will be broken down. If `:tags`
       are set but `:metadata` isn't, then `:metadata` is set to the same value as `:tags` for
-      convenience. Defaults to an empty list;
+      convenience. Defaults to an empty list.
+    * `:tag_values` - a function that receives the metadata and returns a map with the tags as keys
+      and their respective values. Defaults to returning the metadata itself.
     * `:description` - human-readable description of the metric. Might be used by reporters for
-      documentation purposes. Defaults to `nil`;
+      documentation purposes. Defaults to `nil`.
     * `:unit` - an atom describing the unit of event values. Might be used by reporters for
       documentation purposes. Defaults to `:unit`.
 
@@ -145,7 +142,10 @@ defmodule Telemetry.Metrics do
 
   If the reporter does not support the metric given to it, it should log a warning.
 
-  Reporters should also document how `Telemetry.Metrics` metric types, names tags are translated to
+  If the map returned by `tag_values` does not contain a key specified in the `:tags` option,
+  it should log a warning.
+
+  Reporters should also document how `Telemetry.Metrics` metric types, names, and tags are translated to
   metric types and identifiers in the system they publish metrics to.
 
   We recommend reporters to subscribe to those events in a process that also removes the installed
@@ -169,10 +169,9 @@ defmodule Telemetry.Metrics do
   @type normalized_metric_name :: [atom(), ...]
 
   @type measurement :: term() | (:telemetry.event_measurements() -> number())
-  @type metadata ::
-          :all | [key :: term()] | (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type tag :: term()
   @type tags :: [tag()]
+  @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type description :: nil | String.t()
   @type unit :: atom()
   @type counter_options :: [metric_option()]
@@ -182,8 +181,8 @@ defmodule Telemetry.Metrics do
   @type metric_option ::
           {:event_name, :telemetry.event_name()}
           | {:measurement, measurement()}
-          | {:metadata, metadata()}
           | {:tags, tags()}
+          | {:tag_values, tag_values()}
           | {:description, description()}
           | {:unit, unit()}
 
@@ -197,8 +196,8 @@ defmodule Telemetry.Metrics do
           name: normalized_metric_name(),
           measurement: measurement(),
           event_name: :telemetry.event_name(),
-          metadata: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           tags: tags(),
+          tag_values: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           description: description(),
           unit: unit()
         }
@@ -232,8 +231,8 @@ defmodule Telemetry.Metrics do
       name: metric_name,
       event_name: event_name,
       measurement: measurement,
-      metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
+      tag_values: options |> Keyword.fetch!(:tag_values) |> tag_values_spec_to_function(),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -251,7 +250,6 @@ defmodule Telemetry.Metrics do
         "user.session_count",
         event_name: "user.session_count",
         measurement: :delta,
-        metadata: [:role],
         tags: [:role]
       )
   """
@@ -269,8 +267,8 @@ defmodule Telemetry.Metrics do
       name: metric_name,
       event_name: event_name,
       measurement: measurement,
-      metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
+      tag_values: options |> Keyword.fetch!(:tag_values) |> tag_values_spec_to_function(),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -303,8 +301,8 @@ defmodule Telemetry.Metrics do
       name: metric_name,
       event_name: event_name,
       measurement: measurement,
-      metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
+      tag_values: options |> Keyword.fetch!(:tag_values) |> tag_values_spec_to_function(),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -343,8 +341,8 @@ defmodule Telemetry.Metrics do
       name: metric_name,
       event_name: event_name,
       measurement: measurement,
-      metadata: options |> Keyword.fetch!(:metadata) |> metadata_spec_to_function(),
       tags: Keyword.fetch!(options, :tags),
+      tag_values: options |> Keyword.fetch!(:tag_values) |> tag_values_spec_to_function(),
       buckets: buckets,
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
@@ -390,21 +388,14 @@ defmodule Telemetry.Metrics do
 
   @spec fill_in_default_metric_options([metric_option()]) :: [metric_option()]
   defp fill_in_default_metric_options(options) do
-    options =
-      if Keyword.has_key?(options, :tags) and not Keyword.has_key?(options, :metadata) do
-        Keyword.put(options, :metadata, Keyword.fetch!(options, :tags))
-      else
-        options
-      end
-
     Keyword.merge(default_metric_options(), options)
   end
 
   @spec default_metric_options() :: [metric_option()]
   defp default_metric_options() do
     [
-      metadata: [],
       tags: [],
+      tag_values: & &1,
       description: nil,
       unit: :unit
     ]
@@ -412,35 +403,10 @@ defmodule Telemetry.Metrics do
 
   @spec validate_metric_options!([metric_option()]) :: :ok | no_return()
   defp validate_metric_options!(options) do
-    if metadata = Keyword.get(options, :metadata), do: validate_metadata!(metadata)
     if tags = Keyword.get(options, :tags), do: validate_tags!(tags)
+    if tag_values = Keyword.get(options, :tag_values), do: validate_tag_values!(tag_values)
     if description = Keyword.get(options, :description), do: validate_description!(description)
     if unit = Keyword.get(options, :unit), do: validate_unit!(unit)
-  end
-
-  @spec validate_metadata!(term()) :: :ok | no_return()
-  defp validate_metadata!(fun) when is_function(fun, 1) do
-    :ok
-  end
-
-  defp validate_metadata!(fun) when is_function(fun) do
-    {:arity, arity} = :erlang.fun_info(fun, :arity)
-
-    raise ArgumentError,
-          "expected metadata fun to be a one-argument function, but the arity is #{arity}"
-  end
-
-  defp validate_metadata!(:all) do
-    :ok
-  end
-
-  defp validate_metadata!(list) when is_list(list) do
-    :ok
-  end
-
-  defp validate_metadata!(term) do
-    raise ArgumentError,
-          "expected metadata to be an atom :all, a list or a function, got #{inspect(term)}"
   end
 
   @spec validate_tags!(term()) :: :ok | no_return()
@@ -450,6 +416,16 @@ defmodule Telemetry.Metrics do
 
   defp validate_tags!(term) do
     raise ArgumentError, "expected tag keys to be a list, got: #{inspect(term)}"
+  end
+
+  @spec validate_tag_values!(term()) :: :ok | no_return()
+  defp validate_tag_values!(fun) when is_function(fun, 1) do
+    :ok
+  end
+
+  defp validate_tag_values!(term) do
+    raise ArgumentError,
+          "expected tag_values fun to be a one-argument function, got: #{inspect(term)}"
   end
 
   @spec validate_description!(term()) :: :ok | no_return()
@@ -487,10 +463,7 @@ defmodule Telemetry.Metrics do
     raise ArgumentError, "expected buckets to be a non-empty list, got #{inspect(term)}"
   end
 
-  @spec metadata_spec_to_function(metadata()) ::
+  @spec tag_values_spec_to_function(tag_values()) ::
           (:telemetry.event_metadata() -> :telemetry.event_metadata())
-  defp metadata_spec_to_function(:all), do: & &1
-  defp metadata_spec_to_function([]), do: fn _ -> %{} end
-  defp metadata_spec_to_function(keys) when is_list(keys), do: &Map.take(&1, keys)
-  defp metadata_spec_to_function(fun), do: fun
+  defp tag_values_spec_to_function(fun), do: fun
 end

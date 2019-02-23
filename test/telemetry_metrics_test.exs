@@ -26,9 +26,9 @@ defmodule Telemetry.MetricsTest do
         end
       end
 
-      test "raises when metadata is invalid" do
+      test "raises when tag_values is invalid" do
         assert_raise ArgumentError, fn ->
-          options = [metadata: 1] ++ unquote(extra_options)
+          options = [tag_values: 1] ++ unquote(extra_options)
           apply(Metrics, unquote(metric_type), ["my.metric", options])
         end
       end
@@ -66,16 +66,16 @@ defmodule Telemetry.MetricsTest do
         assert nil == metric.description
         assert :unit == metric.unit
         assert :latency = metric.measurement
-        metadata_fun = metric.metadata
-        assert %{} == metadata_fun.(%{key: 1, another_key: 2})
+        tag_values_fun = metric.tag_values
+        assert %{key: 1, another_key: 2} == tag_values_fun.(%{key: 1, another_key: 2})
       end
 
       test "returns #{metric_type} specification with overriden fields" do
         name = "my.metric"
         event_name = [:my, :event]
         measurement = :other_value
-        metadata = ["action"]
-        tags = [:controller, "action"]
+        tag_values = &%{:controller => &1.controller, "controller_action" => &1.action}
+        tags = [:controller, "controller_action"]
         description = "a metric"
         unit = :second
 
@@ -83,8 +83,8 @@ defmodule Telemetry.MetricsTest do
           [
             event_name: event_name,
             measurement: measurement,
-            metadata: metadata,
             tags: tags,
+            tag_values: tag_values,
             description: description,
             unit: unit
           ] ++ unquote(extra_options)
@@ -97,9 +97,10 @@ defmodule Telemetry.MetricsTest do
         assert description == metric.description
         assert unit == metric.unit
         assert :other_value = metric.measurement
-        metadata_fun = metric.metadata
-        assert %{"action" => "create"} ==
-                 metadata_fun.(%{:controller => UserController, "action" => "create"})
+        tag_values_fun = metric.tag_values
+
+        assert %{:controller => UserController, "controller_action" => "create"} ==
+                 tag_values_fun.(%{controller: UserController, action: "create"})
       end
 
       test "return normalized metric and event name in the specification" do
@@ -113,43 +114,30 @@ defmodule Telemetry.MetricsTest do
         assert [:http, :requests, :count] == metric.name
       end
 
-      test "setting :all as metadata returns identity function in metric spec" do
+      test "tag_values default returns identity function in metric spec" do
         metric =
           apply(Metrics, unquote(metric_type), [
             "my.event.value",
-            [metadata: :all] ++ unquote(extra_options)
+            unquote(extra_options)
           ])
 
-        metadata_fun = metric.metadata
+        tag_values_fun = metric.tag_values
         event_metadata = %{controller: UserController, action: "create"}
 
-        assert event_metadata == metadata_fun.(event_metadata)
+        assert event_metadata == tag_values_fun.(event_metadata)
       end
 
-      test "setting list of terms as metadata returns function returning subset of a map in metric spec" do
+      test "setting function as tag_values returns that function in metric spec" do
         metric =
           apply(Metrics, unquote(metric_type), [
             "my.event.value",
-            [metadata: [:action]] ++ unquote(extra_options)
+            [tag_values: fn _ -> %{constant: "metadata"} end] ++ unquote(extra_options)
           ])
 
-        metadata_fun = metric.metadata
+        tag_values_fun = metric.tag_values
         event_metadata = %{controller: UserController, action: "create"}
 
-        assert %{action: "create"} == metadata_fun.(event_metadata)
-      end
-
-      test "setting function as metadata returns that function in metric spec" do
-        metric =
-          apply(Metrics, unquote(metric_type), [
-            "my.event.value",
-            [metadata: fn _ -> %{constant: "metadata"} end] ++ unquote(extra_options)
-          ])
-
-        metadata_fun = metric.metadata
-        event_metadata = %{controller: UserController, action: "create"}
-
-        assert %{constant: "metadata"} == metadata_fun.(event_metadata)
+        assert %{constant: "metadata"} == tag_values_fun.(event_metadata)
       end
 
       test "using metric name with leading, trailing or subsequent dots raises" do
@@ -174,31 +162,19 @@ defmodule Telemetry.MetricsTest do
         end
       end
 
-      test "setting tags and not metadata returns spec with metadata fun filtering only specified tags" do
-        tags = [:action]
+      test "tag_values fun can leave other keys than in metadata" do
+        tags = [:action, :some_tag]
+        tag_values_fun = fn metadata -> Map.put(metadata, :some_tag, "some_value") end
+        event_metadata = %{controller: UserController, action: :create}
 
         metric =
           apply(Metrics, unquote(metric_type), [
             "my.event:value",
-            [tags: tags] ++ unquote(extra_options)
+            [tags: tags, tag_values: tag_values_fun] ++ unquote(extra_options)
           ])
 
-        event_metadata = metric.metadata.(%{controller: UserController, action: :create})
-        assert tags == Map.keys(event_metadata)
-      end
-
-      test "metadata fun can leave other keys than tags" do
-        tags = [:action]
-        metadata = [:controller]
-
-        metric =
-          apply(Metrics, unquote(metric_type), [
-            "my.event:value",
-            [tags: tags, metadata: metadata] ++ unquote(extra_options)
-          ])
-
-        event_metadata = metric.metadata.(%{controller: UserController, action: :create})
-        refute tags == Map.keys(event_metadata)
+        tag_values = metric.tag_values.(event_metadata)
+        refute tags == Map.keys(tag_values)
       end
 
       test "setting term as measurement returns function returning value under that term in metric spec" do
