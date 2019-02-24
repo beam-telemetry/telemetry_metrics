@@ -232,7 +232,7 @@ defmodule Telemetry.Metrics do
       event_name: event_name,
       measurement: measurement,
       tags: Keyword.fetch!(options, :tags),
-      tag_values: options |> Keyword.fetch!(:tag_values) |> tag_values_spec_to_function(),
+      tag_values: options |> Keyword.fetch!(:tag_values),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -268,7 +268,7 @@ defmodule Telemetry.Metrics do
       event_name: event_name,
       measurement: measurement,
       tags: Keyword.fetch!(options, :tags),
-      tag_values: options |> Keyword.fetch!(:tag_values) |> tag_values_spec_to_function(),
+      tag_values: options |> Keyword.fetch!(:tag_values),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -302,7 +302,7 @@ defmodule Telemetry.Metrics do
       event_name: event_name,
       measurement: measurement,
       tags: Keyword.fetch!(options, :tags),
-      tag_values: options |> Keyword.fetch!(:tag_values) |> tag_values_spec_to_function(),
+      tag_values: options |> Keyword.fetch!(:tag_values),
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
     }
@@ -342,7 +342,7 @@ defmodule Telemetry.Metrics do
       event_name: event_name,
       measurement: measurement,
       tags: Keyword.fetch!(options, :tags),
-      tag_values: options |> Keyword.fetch!(:tag_values) |> tag_values_spec_to_function(),
+      tag_values: options |> Keyword.fetch!(:tag_values),
       buckets: buckets,
       description: Keyword.fetch!(options, :description),
       unit: Keyword.fetch!(options, :unit)
@@ -462,8 +462,4 @@ defmodule Telemetry.Metrics do
   defp validate_distribution_buckets!(term) do
     raise ArgumentError, "expected buckets to be a non-empty list, got #{inspect(term)}"
   end
-
-  @spec tag_values_spec_to_function(tag_values()) ::
-          (:telemetry.event_metadata() -> :telemetry.event_metadata())
-  defp tag_values_spec_to_function(fun), do: fun
 end
