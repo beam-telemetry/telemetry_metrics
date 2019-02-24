@@ -98,9 +98,8 @@ defmodule Telemetry.Metrics do
       the last segment of the metric name. It can be either an arbitrary term, a key in the event's
       measurements map, or a function accepting the whole measurements map and returning the actual
       value to be used.
-      * `:tags` - a subset of metadata keys by which aggregations will be broken down. If `:tags`
-      are set but `:metadata` isn't, then `:metadata` is set to the same value as `:tags` for
-      convenience. Defaults to an empty list.
+    * `:tags` - a subset of metadata keys by which aggregations will be broken down. Defaults to
+      an empty list.
     * `:tag_values` - a function that receives the metadata and returns a map with the tags as keys
       and their respective values. Defaults to returning the metadata itself.
     * `:description` - human-readable description of the metric. Might be used by reporters for
