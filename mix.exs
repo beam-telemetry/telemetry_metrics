@@ -43,11 +43,15 @@ defmodule Telemetry.Metrics.MixProject do
 
   defp docs do
     [
-      main: "readme",
+      main: "overview",
       canonical: "http://hexdocs.pm/telemetry_metrics",
       source_url: "https://github.com/beam-telemetry/telemetry_metrics",
       source_ref: "v#{@version}",
-      extras: ["README.md"]
+      extras: [
+        "docs/overview.md",
+        "docs/rationale.md",
+        "docs/writing_reporters.md"
+      ]
     ]
   end
 
