@@ -150,23 +150,7 @@ defmodule Telemetry.Metrics do
   """
   @spec counter(metric_name(), counter_options()) :: Counter.t()
   def counter(metric_name, options \\ []) do
-    metric_name = validate_metric_or_event_name!(metric_name)
-    {event_name, [measurement]} = Enum.split(metric_name, -1)
-    {event_name, options} = Keyword.pop(options, :event_name, event_name)
-    {measurement, options} = Keyword.pop(options, :measurement, measurement)
-    event_name = validate_metric_or_event_name!(event_name)
-    validate_metric_options!(options)
-    options = fill_in_default_metric_options(options)
-
-    %Counter{
-      name: metric_name,
-      event_name: event_name,
-      measurement: measurement,
-      tags: Keyword.fetch!(options, :tags),
-      tag_values: options |> Keyword.fetch!(:tag_values),
-      description: Keyword.fetch!(options, :description),
-      unit: Keyword.fetch!(options, :unit)
-    }
+    struct(Counter, common_fields(metric_name, options))
   end
 
   @doc """
@@ -188,23 +172,7 @@ defmodule Telemetry.Metrics do
   """
   @spec sum(metric_name(), sum_options()) :: Sum.t()
   def sum(metric_name, options \\ []) do
-    metric_name = validate_metric_or_event_name!(metric_name)
-    {event_name, [measurement]} = Enum.split(metric_name, -1)
-    {event_name, options} = Keyword.pop(options, :event_name, event_name)
-    {measurement, options} = Keyword.pop(options, :measurement, measurement)
-    event_name = validate_metric_or_event_name!(event_name)
-    validate_metric_options!(options)
-    options = fill_in_default_metric_options(options)
-
-    %Sum{
-      name: metric_name,
-      event_name: event_name,
-      measurement: measurement,
-      tags: Keyword.fetch!(options, :tags),
-      tag_values: options |> Keyword.fetch!(:tag_values),
-      description: Keyword.fetch!(options, :description),
-      unit: Keyword.fetch!(options, :unit)
-    }
+    struct(Sum, common_fields(metric_name, options))
   end
 
   @doc """
@@ -224,23 +192,7 @@ defmodule Telemetry.Metrics do
   """
   @spec last_value(metric_name(), last_value_options()) :: LastValue.t()
   def last_value(metric_name, options \\ []) do
-    metric_name = validate_metric_or_event_name!(metric_name)
-    {event_name, [measurement]} = Enum.split(metric_name, -1)
-    {event_name, options} = Keyword.pop(options, :event_name, event_name)
-    {measurement, options} = Keyword.pop(options, :measurement, measurement)
-    event_name = validate_metric_or_event_name!(event_name)
-    validate_metric_options!(options)
-    options = fill_in_default_metric_options(options)
-
-    %LastValue{
-      name: metric_name,
-      event_name: event_name,
-      measurement: measurement,
-      tags: Keyword.fetch!(options, :tags),
-      tag_values: options |> Keyword.fetch!(:tag_values),
-      description: Keyword.fetch!(options, :description),
-      unit: Keyword.fetch!(options, :unit)
-    }
+    struct(LastValue, common_fields(metric_name, options))
   end
 
   @doc """
@@ -268,29 +220,28 @@ defmodule Telemetry.Metrics do
   """
   @spec distribution(metric_name(), distribution_options()) :: Distribution.t()
   def distribution(metric_name, options) do
+    fields = common_fields(metric_name, options)
+    buckets = Keyword.fetch!(options, :buckets)
+    validate_distribution_buckets!(buckets)
+    struct(Distribution, Map.put(fields, :buckets, buckets))
+  end
+
+  # Helpers
+
+  @spec common_fields(metric_name(), [metric_option()]) :: map()
+  defp common_fields(metric_name, options) do
     metric_name = validate_metric_or_event_name!(metric_name)
     {event_name, [measurement]} = Enum.split(metric_name, -1)
     {event_name, options} = Keyword.pop(options, :event_name, event_name)
     {measurement, options} = Keyword.pop(options, :measurement, measurement)
     event_name = validate_metric_or_event_name!(event_name)
-    buckets = Keyword.fetch!(options, :buckets)
-    validate_distribution_buckets!(buckets)
     validate_metric_options!(options)
-    options = fill_in_default_metric_options(options)
 
-    %Distribution{
-      name: metric_name,
-      event_name: event_name,
-      measurement: measurement,
-      tags: Keyword.fetch!(options, :tags),
-      tag_values: options |> Keyword.fetch!(:tag_values),
-      buckets: buckets,
-      description: Keyword.fetch!(options, :description),
-      unit: Keyword.fetch!(options, :unit)
-    }
+    options
+    |> fill_in_default_metric_options()
+    |> Map.new()
+    |> Map.merge(%{name: metric_name, event_name: event_name, measurement: measurement})
   end
-
-  # Helpers
 
   @spec validate_metric_or_event_name!(term()) :: [atom(), ...]
   defp validate_metric_or_event_name!(metric_or_event_name)
