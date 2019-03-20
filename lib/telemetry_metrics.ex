@@ -67,8 +67,13 @@ defmodule Telemetry.Metrics do
       and their respective values. Defaults to returning the metadata itself.
     * `:description` - human-readable description of the metric. Might be used by reporters for
       documentation purposes. Defaults to `nil`.
-    * `:unit` - an atom describing the unit of event values. Might be used by reporters for
-      documentation purposes. Defaults to `:unit`.
+    * `:unit` - an atom describing the unit of selected measurement or a tuple indicating that a
+      measurement should be converted from one unit to another before a metric is updated. Currently,
+      only time unit conversions are supported. For example, setting this option to
+      `{:native, :millisecond}` means that the measurements are provided in the `:native` time unit
+      (you can read more about it in the documentation for `System.convert_time_unit/3`), but a metric
+      should have its values in milliseconds. Both elements of the conversion tuple need to be of
+      type `t:time_unit/0`.
 
   ## Reporters
 
@@ -100,6 +105,8 @@ defmodule Telemetry.Metrics do
   @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type description :: nil | String.t()
   @type unit :: atom()
+  @type unit_conversion() :: {time_unit(), time_unit()}
+  @type time_unit() :: :second | :millisecond | :microsecond | :nanosecond | :native
   @type counter_options :: [metric_option()]
   @type sum_options :: [metric_option()]
   @type last_value_options :: [metric_option()]
@@ -110,7 +117,7 @@ defmodule Telemetry.Metrics do
           | {:tags, tags()}
           | {:tag_values, tag_values()}
           | {:description, description()}
-          | {:unit, unit()}
+          | {:unit, unit() | unit_conversion()}
 
   @typedoc """
   Common fields for metric specifications
@@ -235,12 +242,20 @@ defmodule Telemetry.Metrics do
     {event_name, options} = Keyword.pop(options, :event_name, event_name)
     {measurement, options} = Keyword.pop(options, :measurement, measurement)
     event_name = validate_metric_or_event_name!(event_name)
+    {unit, options} = Keyword.pop(options, :unit, :unit)
+    {unit, conversion_ratio} = validate_unit!(unit)
+    measurement = maybe_convert_measurement(measurement, conversion_ratio)
     validate_metric_options!(options)
 
     options
     |> fill_in_default_metric_options()
     |> Map.new()
-    |> Map.merge(%{name: metric_name, event_name: event_name, measurement: measurement})
+    |> Map.merge(%{
+      name: metric_name,
+      event_name: event_name,
+      measurement: measurement,
+      unit: unit
+    })
   end
 
   @spec validate_metric_or_event_name!(term()) :: [atom(), ...]
@@ -288,8 +303,7 @@ defmodule Telemetry.Metrics do
     [
       tags: [],
       tag_values: & &1,
-      description: nil,
-      unit: :unit
+      description: nil
     ]
   end
 
@@ -298,7 +312,6 @@ defmodule Telemetry.Metrics do
     if tags = Keyword.get(options, :tags), do: validate_tags!(tags)
     if tag_values = Keyword.get(options, :tag_values), do: validate_tag_values!(tag_values)
     if description = Keyword.get(options, :description), do: validate_description!(description)
-    if unit = Keyword.get(options, :unit), do: validate_unit!(unit)
   end
 
   @spec validate_tags!(term()) :: :ok | no_return()
@@ -329,14 +342,67 @@ defmodule Telemetry.Metrics do
     end
   end
 
-  @spec validate_unit!(term()) :: :ok | no_return()
+  @spec maybe_convert_measurement(measurement(), conversion_ratio :: non_neg_integer()) ::
+          measurement()
+  defp maybe_convert_measurement(measurement, 1) do
+    # Don't wrap measurement if no conversion is required.
+    measurement
+  end
+
+  defp maybe_convert_measurement(measurement, conversion_ratio)
+       when is_function(measurement, 1) do
+    fn measurements ->
+      measurement.(measurements) * conversion_ratio
+    end
+  end
+
+  defp maybe_convert_measurement(measurement, conversion_ratio) do
+    fn measurements ->
+      measurements[measurement] * conversion_ratio
+    end
+  end
+
+  @spec validate_unit!(term()) :: {unit(), conversion_ratio :: number()} | no_return()
+  defp validate_unit!({from_unit, to_unit} = t) do
+    if time_unit?(from_unit) and time_unit?(to_unit) do
+      {to_unit, conversion_ratio(from_unit, to_unit)}
+    else
+      raise ArgumentError,
+            "expected both elements of the unit conversion tuple" <>
+              "to represent time units, got #{inspect(t)}"
+    end
+  end
+
   defp validate_unit!(unit) when is_atom(unit) do
-    :ok
+    {unit, 1}
   end
 
   defp validate_unit!(term) do
-    raise ArgumentError, "expected unit to be an atom, got #{inspect(term)}"
+    raise ArgumentError,
+          "expected unit to be an atom or a two-element tuple, got #{inspect(term)}"
   end
+
+  # Maybe warn or raise if the result of conversion is 0?
+  @spec conversion_ratio(time_unit(), time_unit()) :: number()
+  defp conversion_ratio(unit, unit), do: 1
+
+  defp conversion_ratio(from_unit, to_unit) do
+    case System.convert_time_unit(1, from_unit, to_unit) do
+      0 ->
+        1 / System.convert_time_unit(1, to_unit, from_unit)
+
+      ratio ->
+        ratio
+    end
+  end
+
+  @spec time_unit?(term()) :: boolean()
+  defp time_unit?(:native), do: true
+  defp time_unit?(:second), do: true
+  defp time_unit?(:millisecond), do: true
+  defp time_unit?(:microsecond), do: true
+  defp time_unit?(:nanosecond), do: true
+  defp time_unit?(_), do: false
 
   @spec validate_distribution_buckets!(term()) :: :ok | no_return()
   defp validate_distribution_buckets!([_ | _] = buckets) do
