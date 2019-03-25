@@ -143,6 +143,29 @@ metric definition accepts a function in `:tag_values` option which transforms th
 desired shape. Note that this function is called for each event, so it's important to keep it fast
 if the rate of events is high.
 
+## Converting units
+
+It might happen that the unit of measurement we're tracking is not the desirable unit for the
+metric values, e.g. events are emitted by a 3rd-party library we do not control, or a reporter
+we're using requires specific unit of measurement.
+
+For these scenarios, each metric definition accepts a `:unit` option in a form of a tuple:
+
+```elixir
+distribution("http.request.duration", unit: {from_unit, to_unit})
+```
+
+This means that the measurement will be converted from `from_unit` to `to_unit` before being used
+for updating the metric. Currently, only time conversions are supported, which means that both
+`from_unit` and `to_unit` need to be one of `:second`, `:millisecond`, `:microsecond`,
+`:nanosecond`, or `:native`.
+
+For example, to convert HTTP request duration from `:native` time unit to milliseconds you'd write:
+
+```elixir
+distribution("http.request.duration", unit: {:native, :millisecond})
+```
+
 ## VM metrics
 
 Telemetry.Metrics doesn't have a special treatment for the VM metrics - they need to be based on

@@ -254,6 +254,127 @@ defmodule Telemetry.MetricsTest do
           end
         end
       end
+
+      test "raises when first element of unit-conversion tuple is not a valid time unit" do
+        assert_raise ArgumentError, fn ->
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:byte, :millisecond}] ++ unquote(extra_options)
+          ])
+        end
+      end
+
+      test "raises when second element of unit-conversion tuple is not a valid time unit" do
+        assert_raise ArgumentError, fn ->
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:millisecond, :byte}] ++ unquote(extra_options)
+          ])
+        end
+      end
+
+      test "raises when unit-conversion tuple is not a two-element tuple" do
+        assert_raise ArgumentError, fn ->
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:native, :millisecond, :nanosecond}] ++ unquote(extra_options)
+          ])
+        end
+      end
+
+      test "sets the unit in the definition to the second element of the unit-conversion tuple" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:native, :millisecond}] ++ unquote(extra_options)
+          ])
+
+        assert metric.unit == :millisecond
+      end
+
+      test "raises when unit-conversion tuple is provided but measurement is not a number" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:native, :millisecond}] ++ unquote(extra_options)
+          ])
+
+        assert_raise ArithmeticError, fn ->
+          metric.measurement.(%{latency: :not_a_number})
+        end
+      end
+
+      test "raises when unit-conversion tuple is provided but measurement function doesn't return a number" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:native, :millisecond}, measurement: fn _ -> :not_a_number end] ++
+              unquote(extra_options)
+          ])
+
+        assert_raise ArithmeticError, fn ->
+          metric.measurement.(%{latency: 250})
+        end
+      end
+
+      test "doesn't raise when measurement is not a number but no unit-conversion is required" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: :millisecond, measurement: fn _ -> :not_a_number end] ++ unquote(extra_options)
+          ])
+
+        assert metric.measurement.(%{latency: 250}) == :not_a_number
+      end
+
+      test "doesn't convert a unit if both units are the same" do
+        for unit <- [:native, :second, :millisecond, :microsecond, :nanosecond] do
+          metric =
+            apply(Metrics, unquote(metric_type), [
+              "http.request.latency",
+              [unit: {unit, unit}] ++ unquote(extra_options)
+            ])
+
+          refute is_function(metric.measurement)
+        end
+      end
+
+      test "converts a measurement under key from one regular time unit to another" do
+        units = [:native, :second, :millisecond, :microsecond, :nanosecond]
+        measurement = :rand.uniform(10_000_000)
+
+        # We need to filter out cases where conversion doesn't change anything, because then the
+        # measurement inside metric definition is not a function but a key, and the test fails.
+        # We also can't simply filter using `from != to`, because native is approximately equal to
+        # one of the regular time units, and the conversion ratio would still be equal to 1.
+        for from <- units, to <- units, measurement != converted_unit(measurement, from, to) do
+          metric =
+            apply(Metrics, unquote(metric_type), [
+              "http.request.latency",
+              [unit: {from, to}] ++
+                unquote(extra_options)
+            ])
+
+          measurements = %{latency: measurement}
+
+          assert metric.measurement.(measurements) == converted_unit(measurement, from, to)
+        end
+      end
+
+      test "converts a result of measurement function from one regular time unit to another" do
+        units = [:native, :second, :millisecond, :microsecond, :nanosecond]
+        measurement = :rand.uniform(10_000_000)
+
+        for from <- units, to <- units, from != to do
+          metric =
+            apply(Metrics, unquote(metric_type), [
+              "http.request.latency",
+              [unit: {from, to}, measurement: fn _ -> measurement end] ++ unquote(extra_options)
+            ])
+
+          assert metric.measurement.(%{}) == converted_unit(measurement, from, to)
+        end
+      end
     end
   end
 
@@ -280,4 +401,30 @@ defmodule Telemetry.MetricsTest do
       Metrics.distribution("http.request.latency", [])
     end
   end
+
+  defp converted_unit(measurement, from_unit, to_unit) do
+    measurement * conversion_ratio(from_unit, to_unit)
+  end
+
+  defp conversion_ratio(unit, unit), do: 1
+
+  defp conversion_ratio(from, to) when from == :native or to == :native do
+    case System.convert_time_unit(1, from, to) do
+      0 ->
+        1 / System.convert_time_unit(1, to, from)
+
+      ratio ->
+        ratio
+    end
+  end
+
+  # Make the conversion for regular units more explicit in tests, so that we're sure we get the
+  # correct results.
+  defp conversion_ratio(:second, :millisecond), do: 1_000
+  defp conversion_ratio(:second, :microsecond), do: 1_000_000
+  defp conversion_ratio(:second, :nanosecond), do: 1_000_000_000
+  defp conversion_ratio(:millisecond, :microsecond), do: 1_000
+  defp conversion_ratio(:millisecond, :nanosecond), do: 1_000_000
+  defp conversion_ratio(:microsecond, :nanosecond), do: 1_000
+  defp conversion_ratio(from, to), do: 1 / conversion_ratio(to, from)
 end
