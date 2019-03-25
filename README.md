@@ -3,55 +3,45 @@
 [![CircleCI](https://circleci.com/gh/beam-telemetry/telemetry_metrics.svg?style=svg)](https://circleci.com/gh/beam-telemetry/telemetry_metrics)
 [![Codecov](https://codecov.io/gh/beam-telemetry/telemetry_metrics/branch/master/graphs/badge.svg)](https://codecov.io/gh/beam-telemetry/telemetry_metrics/branch/master/graphs/badge.svg)
 
-Defines data model and specifications for aggregating Telemetry events.
+Telemetry.Metrics provides a common interface for defining metrics based on
+[`:telemetry`](https://github.com/beam-telemetry/telemetry) events. While a single event means that
+_a thing_ happened (e.g. an HTTP request was sent or a DB query returned a result), a metric
+is an aggregation of those events over time.
 
-Telemetry.Metrics provides functions for building _metric specifications_ - structs describing how
-values of particular events should be aggregated. Metric specifications can be provided to a reporter
-which knows how to translate the events into a metric _in the system it reports to_. This is the crucial
-part of this library design - it doesn't aggregate events itself in any way, it relies on 3rd party
-reporters to perform this work in a way that makes the most sense for a metrics system at hand.
-
-To give a more concrete example, let's say that you want to count the number of database queries your
-application makes, and you want a separate counter for each query type and table. In this case, you
-would construct the following metric specification:
+For example, to build a sum of HTTP request payload size received by your system, you could define
+the following metric:
 
 ```elixir
-Telemetry.Metrics.counter(
-  "db.query.count",
-  tags: [:table, :query_type]
-)
+Telemetry.Metrics.sum("http.request.payload_size")
 ```
 
-This specification means that:
+This definition means that the metric is based on `[:http, :request]` events, and it should sum up
+values under `:payload_size` key in events' measurements.
 
-- metric should count the number of times a `[:db, :query]` event has been emitted. `count` means
-  that the metric should be based on `:count` measurement values, but it's not relevant for the
-  counter metric
-- the name of the metric is `[:db, :query, :count]`
-- the count should be broken down by each unique `:table`/`:query_type` pair found in event metadata
-
-Now when we provide such specification to the reporter and emit following events
+Telemetry.Metrics also supports breaking down the metric values by tags - this means that there
+will be a distinct metric for each unique set of selected tags found in event metadata:
 
 ```elixir
-:telemetry.execute([:db, :query], %{total: 62}, %{table: "users", query_type: "select"})
-:telemetry.execute([:db, :query], %{total: 67}, %{table: "users", query_type: "insert"})
-:telemetry.execute([:db, :query], %{total: 18}, %{table: "users", query_type: "select"})
-:telemetry.execute([:db, :query], %{total: 15}, %{table: "users", query_type: "select"})
+Telemetry.Metrics.sum("http.request.payload_size", tags: [:host, :method])
 ```
 
-we expect to find the following aggregations in the metric system we report to
+The above definiton means that we want to keep track of the sum, but for each unique pair of
+request host and method (assuming that `:host` and `:method` keys are present in event's metadata).
 
-| table      | query_type | count |
-| ---------- | ---------- | ----- |
-| `users`    | `select`   | 1     |
-| `users`    | `create`   | 1     |
-| `products` | `select`   | 2     |
+There are four metric types provided by Telemetry.Metrics:
 
-The way in which reporters aggregate or export this data is not in the scope of this project. Rather,
-a goal is to define a standardized set of aggregations that will be supported by reporters.
+- counter, which counts the total number of emitted events
+- sum which keeps track of the sum of selected measurement
+- last value, holding the value of the selected measurement from the most recent event
+- distribution, which builds a histogram of selected measurement
 
-See the documentation for [Telemetry.Metrics module](https://hexdocs.pm/telemetry_metrics/0.1.0/Telemetry.Metrics.html)
-for more details.
+Note that the metric definitions themselves are not enough, as they only provide the specification
+of what is the expected end-result. The job of subscribing to events and building the actual
+metrics is a responsibility of reporters. This is the crucial part of this library design - it
+doesn't aggregate events itself but relies on 3rd party reporters to perform this work in a way that
+makes the most sense for a particular monitoring system.
+
+See the documentation on [hexdocs](https://hexdocs.pm/telemetry_metrics/0.2.0) for more details.
 
 ## Copyright and License
 

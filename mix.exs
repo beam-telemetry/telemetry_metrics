@@ -1,7 +1,7 @@
 defmodule Telemetry.Metrics.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
 
   def project do
     [
@@ -57,7 +57,7 @@ defmodule Telemetry.Metrics.MixProject do
 
   def description do
     """
-    Defines data model and specifications for aggregating Telemetry events.
+    Provides a common interface for defining metrics based on Telemetry events.
     """
   end
 
