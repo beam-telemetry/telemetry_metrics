@@ -235,7 +235,7 @@ defmodule Telemetry.Metrics do
 
   # Helpers
 
-  @spec common_fields(metric_name(), [metric_option()]) :: map()
+  @spec common_fields(metric_name(), [metric_option() | {atom(), term()}]) :: map()
   defp common_fields(metric_name, options) do
     metric_name = validate_metric_or_event_name!(metric_name)
     {event_name, [measurement]} = Enum.split(metric_name, -1)
