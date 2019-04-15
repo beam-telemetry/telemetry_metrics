@@ -41,7 +41,7 @@ metrics is a responsibility of reporters. This is the crucial part of this libra
 doesn't aggregate events itself but relies on 3rd party reporters to perform this work in a way that
 makes the most sense for a particular monitoring system.
 
-See the documentation on [hexdocs](https://hexdocs.pm/telemetry_metrics/0.2.0) for more details.
+See the documentation on [hexdocs](https://hexdocs.pm/telemetry_metrics/0.2.1) for more details.
 
 ## Copyright and License
 
