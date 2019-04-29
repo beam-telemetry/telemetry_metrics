@@ -8,7 +8,7 @@ defmodule Telemetry.MetricsTest do
         counter: [],
         sum: [],
         last_value: [],
-        statistics: [],
+        summary: [],
         distribution: [buckets: [0, 100, 200]]
       ] do
     describe "#{metric_type}/2" do

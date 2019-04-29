@@ -1,6 +1,6 @@
-defmodule Telemetry.Metrics.Statistics do
+defmodule Telemetry.Metrics.Summary do
   @moduledoc """
-  Defines a specification of statistics metric.
+  Defines a specification of summary metric.
   """
 
   alias Telemetry.Metrics

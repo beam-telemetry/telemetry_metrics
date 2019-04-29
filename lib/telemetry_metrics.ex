@@ -26,8 +26,8 @@ defmodule Telemetry.Metrics do
     * `counter/2` which counts the total number of emitted events
     * `sum/2` which keeps track of the sum of selected measurement
     * `last_value/2` holding the value of the selected measurement from the most recent event
-    * `statistics/2` calculating summary statistics of the selected measurement, like maximum,
-      mean, percentiles etc.
+    * `summary/2` calculating statistics of the selected measurement, like maximum, mean,
+      percentiles etc.
     * `distribution/2` which builds a histogram of selected measurement
 
   Note that these metric definitions by itself are not enough, as they only provide the specification
@@ -89,7 +89,7 @@ defmodule Telemetry.Metrics do
 
   require Logger
 
-  alias Telemetry.Metrics.{Counter, Sum, LastValue, Statistics, Distribution}
+  alias Telemetry.Metrics.{Counter, Sum, LastValue, Summary, Distribution}
 
   @typedoc """
   The name of the metric, either as string or a list of atoms.
@@ -112,7 +112,7 @@ defmodule Telemetry.Metrics do
   @type counter_options :: [metric_option()]
   @type sum_options :: [metric_option()]
   @type last_value_options :: [metric_option()]
-  @type statistics_options :: [metric_option()]
+  @type summary_options :: [metric_option()]
   @type distribution_options :: [metric_option() | {:buckets, Distribution.buckets()}]
   @type metric_option ::
           {:event_name, :telemetry.event_name()}
@@ -206,25 +206,25 @@ defmodule Telemetry.Metrics do
   end
 
   @doc """
-  Returns a definition of statistics metric.
+  Returns a definition of summary metric.
 
-  This metric aggregates measurement's values into summary statistics, e.g. minimum and maximum,
-  mean, or percentiles. It is up to the reporter to decide which statistics exactly are exposed.
+  This metric aggregates measurement's values into statistics, e.g. minimum and maximum, mean, or
+  percentiles. It is up to the reporter to decide which statistics exactly are exposed.
 
   See the "Metric definitions" section in the top-level documentation of this module for more
   information.
 
   ## Example
 
-      statistics(
+      summary(
         "db.query.duration",
         tags: [:table],
         unit: {:native, :millisecond}
       )
   """
-  @spec statistics(metric_name(), statistics_options()) :: Statistics.t()
-  def statistics(metric_name, options \\ []) do
-    struct(Statistics, common_fields(metric_name, options))
+  @spec summary(metric_name(), summary_options()) :: Summary.t()
+  def summary(metric_name, options \\ []) do
+    struct(Summary, common_fields(metric_name, options))
   end
 
   @doc """

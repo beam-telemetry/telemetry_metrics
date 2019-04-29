@@ -49,7 +49,7 @@ Note that Telemetry.Metrics package doesn't provide any reporter itself.
 
 [`counter/2`](./Telemetry.Metrics.html#counter/2), [`sum/2`](./Telemetry.Metrics.html#sum/2),
 [`last_value/2`](./Telemetry.Metrics.html#last_value/2),
-[`statistics/2`](./Telemetry.Metrics.html#statistics/2) and
+[`summary/2`](./Telemetry.Metrics.html#summary/2) and
 [`distribution/2`](./Telemetry.Metrics.html#distribution/2) functions all return metric defintions.
 
 The most basic metric definition looks like this
@@ -83,9 +83,8 @@ Telemetry.Metrics defines four basic metric types:
   as a measurement, e.g. `"http.request.count"`
 - a `last_value` metric holds the value of a selected measurement found in the most recent event
 - a sum adds up the values of a selected measurement in all the events
-- a statistics metric aggregates measurement values into a set of summary statistics, e.g.
-  minimum and maximum, mean, or percentiles. The exact set of available statistics depends on the
-  reporter in use
+- a summary aggregates measurement values into a set of statistics, e.g. minimum and maximum, mean,
+  or percentiles. The exact set of available statistics depends on the reporter in use
 - a distribution keeps track of the histogram of the selected measurement, i.e. how many
   measurements fall into defined buckets. Histogram allows to compute useful statistics about
   the data, like percentiles, minimum, or maximum.
@@ -156,7 +155,7 @@ we're using requires specific unit of measurement.
 For these scenarios, each metric definition accepts a `:unit` option in a form of a tuple:
 
 ```elixir
-statistics("http.request.duration", unit: {from_unit, to_unit})
+summary("http.request.duration", unit: {from_unit, to_unit})
 ```
 
 This means that the measurement will be converted from `from_unit` to `to_unit` before being used
@@ -167,7 +166,7 @@ for updating the metric. Currently, only time conversions are supported, which m
 For example, to convert HTTP request duration from `:native` time unit to milliseconds you'd write:
 
 ```elixir
-statistics("http.request.duration", unit: {:native, :millisecond})
+summary("http.request.duration", unit: {:native, :millisecond})
 ```
 
 ## VM metrics

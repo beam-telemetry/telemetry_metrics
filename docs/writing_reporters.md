@@ -31,7 +31,7 @@ of metric definitions:
   metrics = [
     counter("..."),
     last_value("..."),
-    statistics("...")
+    summary("...")
   ]
 
   PigeonReporter.start_link(metrics)
@@ -134,7 +134,7 @@ implementing the terminate callback, or having a dedicated process responsible o
 
 It's extremely important that reporters document how `Telemetry.Metrics` metric types, names,
 and tags are translated to metric types and identifiers in the system they publish metrics to
-(this is particularly important for statistics metric which is broadly defined). They should also
+(this is particularly important for a summary metric which is broadly defined). They should also
 document if some metric types are not supported at all.
 
 ## Examples
