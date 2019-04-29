@@ -33,6 +33,8 @@ There are four metric types provided by Telemetry.Metrics:
 - counter, which counts the total number of emitted events
 - sum which keeps track of the sum of selected measurement
 - last value, holding the value of the selected measurement from the most recent event
+- statistics, aggregating measurements into summary statistics like minimum and maximum, mean,
+  percentiles etc.
 - distribution, which builds a histogram of selected measurement
 
 Note that the metric definitions themselves are not enough, as they only provide the specification
