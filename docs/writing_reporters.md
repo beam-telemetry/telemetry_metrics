@@ -12,11 +12,12 @@ Let's get started!
 ## Responsibilites
 
 The reporter has four main responsibilities:
-  * it needs to accept a list of metric definitions as input when being started
-  * it needs to attach handlers to events contained in these definitions
-  * when the events are emitted, it needs to extract the measurement and selected tags, and handle
-    them in a way that makes sense for whathever it chooses to publish to
-  * it needs to detach event handlers when it stops or crashes
+
+- it needs to accept a list of metric definitions as input when being started
+- it needs to attach handlers to events contained in these definitions
+- when the events are emitted, it needs to extract the measurement and selected tags, and handle
+  them in a way that makes sense for whathever it chooses to publish to
+- it needs to detach event handlers when it stops or crashes
 
 ### Accepting metric definitions as input
 
@@ -30,13 +31,14 @@ of metric definitions:
   metrics = [
     counter("..."),
     last_value("..."),
-    distribution("...")
+    summary("...")
   ]
 
   PigeonReporter.start_link(metrics)
 ```
 
-If the reporter doesn't support metrics of particular type, it log a warning or return an error.
+If the reporter doesn't support metrics of particular type, it should log a warning or return an
+error.
 
 ### Attaching event handlers
 
@@ -131,8 +133,9 @@ implementing the terminate callback, or having a dedicated process responsible o
 ## Documentation
 
 It's extremely important that reporters document how `Telemetry.Metrics` metric types, names,
-and tags are translated to metric types and identifiers in the system they publish metrics to.
-They should also document if some metric types are not supported at all.
+and tags are translated to metric types and identifiers in the system they publish metrics to
+(this is particularly important for a summary metric which is broadly defined). They should also
+document if some metric types are not supported at all.
 
 ## Examples
 

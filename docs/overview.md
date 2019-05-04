@@ -48,7 +48,8 @@ Note that Telemetry.Metrics package doesn't provide any reporter itself.
 ## Metric definitions
 
 [`counter/2`](./Telemetry.Metrics.html#counter/2), [`sum/2`](./Telemetry.Metrics.html#sum/2),
-[`last_value/2`](./Telemetry.Metrics.html#last_value/2) and
+[`last_value/2`](./Telemetry.Metrics.html#last_value/2),
+[`summary/2`](./Telemetry.Metrics.html#summary/2) and
 [`distribution/2`](./Telemetry.Metrics.html#distribution/2) functions all return metric defintions.
 
 The most basic metric definition looks like this
@@ -76,29 +77,31 @@ section in the docs for [`Telemetry.Metrics`](./Telemetry.Metrics.html#shared-op
 ## Metric types
 
 Telemetry.Metrics defines four basic metric types:
-  * a counter simply counts the number of emitted events, regardless of measurements included in the
-    events. Since the measurement does not matter in case of a counter, we recommend using `count`
-    as a measurement, e.g. `"http.request.count"`
-  * a `last_value` metric holds the value of a selected measurement found in the most recent event
-  * a sum adds up the values of a selected measurement in all the events
-  * a distribution keeps track of the histogram of the selected measurement, i.e. how many
-    measurements fall into defined buckets. Histogram allows to compute useful statistics about
-    the data, like percentiles, minimum, or maximum.
 
-    For example, given boundaries `[0, 100, 200]`, the distribution metric produces four values:
-      * number of measurements less than or equal to 0
-      * number of measurements greater than 0 and less than or equal to 100
-      * number of measurements greater than 100 and less than or equal to 200
-      * number of measurements greater than 200
+- a counter simply counts the number of emitted events, regardless of measurements included in the
+  events. Since the measurement does not matter in case of a counter, we recommend using `count`
+  as a measurement, e.g. `"http.request.count"`
+- a `last_value` metric holds the value of a selected measurement found in the most recent event
+- a sum adds up the values of a selected measurement in all the events
+- a summary aggregates measurement values into a set of statistics, e.g. minimum and maximum, mean,
+  or percentiles. The exact set of available statistics depends on the reporter in use
+- a distribution keeps track of the histogram of the selected measurement, i.e. how many
+  measurements fall into defined buckets. Histogram allows to compute useful statistics about
+  the data, like percentiles, minimum, or maximum.
 
-Note that not all metric types are supported by all monitoring solutions. However, often they
-support some variation of a particular type. For example, StatsD doesn't have a distribution
-metric as defined here built-in, but it provides a "timer" metric which allows to keep track of
-the percentiles, maximum, etc. That is fine as long as the reporter properly documents the
-differences between the expected and actual behaviour.
+  For example, given boundaries `[0, 100, 200]`, the distribution metric produces four values:
+
+  - number of measurements less than or equal to 0
+  - number of measurements greater than 0 and less than or equal to 100
+  - number of measurements greater than 100 and less than or equal to 200
+  - number of measurements greater than 200
+
+If the monitoring solution doesn't provide metric types exactly as defined above but supports
+metrics resembling them, the reporter should properly document the differences between the expected
+and actual behaviour.
 
 It's also possible that a reporter library provides its own, specialized function for building
-metric definitions, for metric types specific to the system it publishes metrics to.
+metric definitions for metric types specific to the system it publishes metrics to.
 
 ## Breaking down metric values by tags
 
@@ -128,7 +131,7 @@ metadata - this means that in this example, `[:db, :query]` events need to inclu
 The result of aggregating the events above looks like this:
 
 | table    | operation | count |
-|----------|-----------|-------|
+| -------- | --------- | ----- |
 | users    | insert    | 1     |
 | users    | select    | 1     |
 | sessions | insert    | 2     |
@@ -152,7 +155,7 @@ we're using requires specific unit of measurement.
 For these scenarios, each metric definition accepts a `:unit` option in a form of a tuple:
 
 ```elixir
-distribution("http.request.duration", unit: {from_unit, to_unit})
+summary("http.request.duration", unit: {from_unit, to_unit})
 ```
 
 This means that the measurement will be converted from `from_unit` to `to_unit` before being used
@@ -163,7 +166,7 @@ for updating the metric. Currently, only time conversions are supported, which m
 For example, to convert HTTP request duration from `:native` time unit to milliseconds you'd write:
 
 ```elixir
-distribution("http.request.duration", unit: {:native, :millisecond})
+summary("http.request.duration", unit: {:native, :millisecond})
 ```
 
 ## VM metrics
