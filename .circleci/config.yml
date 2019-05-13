@@ -1,7 +1,10 @@
 version: 2.1
 
 orbs:
-  telemetry_metrics: executors: elixir: parameters:
+  telemetry_metrics:
+    executors:
+      elixir:
+        parameters:
           elixir:
             description: Elixir version to used by the job
             type: string
