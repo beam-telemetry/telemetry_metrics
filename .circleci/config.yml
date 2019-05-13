@@ -1,10 +1,7 @@
 version: 2.1
 
 orbs:
-  telemetry_metrics:
-    executors:
-      elixir:
-        parameters:
+  telemetry_metrics: executors: elixir: parameters:
           elixir:
             description: Elixir version to used by the job
             type: string
@@ -67,12 +64,12 @@ workflows:
     jobs:
       - telemetry_metrics/build_and_test:
           name: "1.8-otp-21"
-          elixir: "1.8.1"
+          elixir: "1.8.2"
           otp: "21"
           codecov_flag: "1_8_otp21"
       - telemetry_metrics/build_and_test:
           name: "1.8-otp-20"
-          elixir: "1.8.1"
+          elixir: "1.8.2"
           otp: "20"
           codecov_flag: "1_8_otp19"
       - telemetry_metrics/build_and_test:
