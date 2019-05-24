@@ -104,31 +104,23 @@ We also need to implement the `extract_tags/2` function:
 ```elixir
 def extract_tags(metric, metadata) do
   tag_values = metric.tag_values.(metadata)
-  for tag <- tags, into: %{} do
-    case Map.fetch(tag_values, tag) do
-      {:ok, value} ->
-        Map.put(tags, tag, value)
-      :error ->
-        Logger.warn("Tag #{inspect(tag)} not found in event metadata: #{inspect(metadata)}")
-        Map.put(tags, tag, nil)
-    end
-  end
+  Map.take(tag_values, metric.tags)
 end
 ```
 
-First we need to apply last-minute transformation to the metadata using the `:tag_values` function.
-After that, we loop through the list of desired tags and fetch them from transformed metadata - if
-the particular key is not present in the metadata, we log a warning and assign `nil` as the tag value.
+First we need to apply last-minute transformation to the metadata using the `:tag_values` function,
+then we fetch all transformed metadata, ignoring any tag that may not be available.
 
 It is very important that the code executed on every event does not fail, as that would cause
-the handler to be permanently removed and prevent the metrics from being updated.
+the handler to be permanently removed and prevent the metrics from being updated. If necessary,
+wrap code paths that may fail in a `try/catch` and log whenever there is an error. 
 
 ### Detaching the handlers on termination
 
 To leave the system in a clean state, the reporter should detach the event handlers it installed
-when it's being stopped or terminated unexpectedely. This can be done by trapping exists and
-implementing the terminate callback, or having a dedicated process responsible only for the cleanup
-(e.g. by using monitors).
+when it's being stopped or terminated unexpectedely. This can be done by trapping exists in the
+`init` function and implementing the terminate callback, or having a dedicated process responsible
+only for the cleanup (e.g. by using monitors).
 
 ## Documentation
 
