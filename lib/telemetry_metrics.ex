@@ -3,88 +3,172 @@ defmodule Telemetry.Metrics do
   Common interface for defining metrics based on
   [`:telemetry`](https://github.com/beam-telemetry/telemetry) events.
 
-  Metrics are aggregations of Telemetry events with specific name, providing a view of the
-  system's behaviour over time.
+  Metrics are aggregations of Telemetry events with specific name, providing
+  a view of the system's behaviour over time.
 
-  For example, to build a sum of HTTP request payload size received by your system, you could define
-  a following metric:
+  To give a more concrete example, imagine that somewhere in your code there is
+  a function which send an HTTP request, measures the time it took to get a
+  response, and emits an event with the information:
 
-      sum("http.request.payload_size")
+      :telemetry.execute([:http, :request, :done], %{duration: duration})
 
-  This definition means that the metric is based on `[:http, :request]` events, and it should sum up
-  values under `:payload_size` key in events' measurements.
+  You could define a counter metric, which counts how many HTTP requests were
+  completed:
 
-  Telemetry.Metrics also supports breaking down the metric values by tags - this means that there
-  will be a distinct metric for each unique set of selected tags found in event metadata:
+      Telemetry.Metrics.counter("http.request.done.duration")
 
-      sum("http.request.payload_size", tags: [:host, :method])
+  or you could use a distribution metric to see how many queries were completed
+  in particular time buckets:
 
-  The above definiton means that we want to keep track of the sum, but for each unique pair of
-  request host and method (assuming that `:host` and `:method` keys are present in event's metadata).
+      Telemetry.Metrics.distribution("http.request.done.duration", buckets: [100, 200, 300])
 
-  There are four metric types provided by Telemetry.Metrics:
+  This documentation is going to cover all the available metrics and how to use
+  them, as well as options, and how to integrate those metrics with reporters.
+
+  ## Metrics
+
+  There are five metric types provided by `Telemetry.Metrics`:
+
     * `counter/2` which counts the total number of emitted events
     * `sum/2` which keeps track of the sum of selected measurement
-    * `last_value/2` holding the value of the selected measurement from the most recent event
-    * `summary/2` calculating statistics of the selected measurement, like maximum, mean,
-      percentiles etc.
+    * `last_value/2` holding the value of the selected measurement from
+      the most recent event
+    * `summary/2` calculating statistics of the selected measurement,
+      like maximum, mean, percentiles etc.
     * `distribution/2` which builds a histogram of selected measurement
 
-  Note that these metric definitions by itself are not enough, as they only provide the specification
-  of what is the expected end-result. The job of subscribing to events and building the actual
-  metrics is a responsibility of reporters (described in the "Reporters" section).
+  The first argument to all metric functions is the metric name. Metric
+  name can be provided as a string (e.g. `"http.request.done.duration"`) or a
+  list of atoms (`[:http, :request, :done, :duration]`). The metric name is
+  automatically used to infer the telemetry event and measurement. For example,
+  In the `"http.request.done.duration"` example, the source event name is
+  `[:http, :request, :done]` and metric values are drawn from `:duration`
+  measurement. Like this:
 
-  ## Metric definitions
+      [:http , :request, :done]      :duration
+      <----- event name ------> <-- measurement -->
 
-  Metric definition is a data structure describing the metric - its name, type, name of the
-  events aggregated by the metric, etc. The structure of metric definition is relevant only to
-  authors of reporters.
+  You can also explicitly specify the event name and measurement
+  if you prefer.
 
-  Metric definitions are created using one of the four functions: `counter/2`, `sum/2`, `last_value/2`
-  and `distribution/2`. Each of those functions returns a definition of metric of the corresponding
-  type.
+  The second argument is a list of options. Below is the description of the
+  options common to all metric types:
 
-  The first argument to all these functions is the metric name. Metric name can be provided as
-  a string (e.g. `"http.request.latency"`) or a list of atoms (`[:http, :request, :latency]`). If not
-  overriden in the metric options, metric name also determines the name of Telemetry event and
-  measurement used to produce metric values. In the `"http.request.latency"` example, the source
-  event name is `[:http, :request]` and metric values are drawn from `:latency` measurement.
+    * `:event_name` - the source event name. Can be represented either as a
+      string (e.g. `"http.request"`) or a list of atoms (`[:http, :request]`).
+      By default the event name is all but the last segment of the metric name.
+    * `:measurement` - the event measurement used as a source of a metric values.
+      By default it is the last segment of the metric name. It can be either an
+      arbitrary term, a key in the event's measurements map, or a function
+      accepting the whole measurements map and returning the actual value to be used.
+    * `:tags` - a subset of metadata keys by which aggregations will be broken down.
+      Defaults to an empty list.
+    * `:tag_values` - a function that receives the metadata and returns a map with
+      the tags as keys and their respective values. Defaults to returning the
+      metadata itself.
+    * `:description` - human-readable description of the metric. Might be used by
+      reporters for documentation purposes. Defaults to `nil`.
+    * `:unit` - an atom describing the unit of selected measurement, typically in
+      singular, such as `:millisecond`, `:byte`, `:kilobyte`, etc. It may also be
+      a tuple indicating that a measurement should be converted from one unit to
+      another before a metric is updated. Currently, only time unit conversions
+      are supported. We discuss those in detail in the "Converting Units" section.
 
-  > Note: do not use data from external sources as metric or event names! Since they are converted
-  > to atoms, your application becomes vulnerable to atom leakage and might run out of memory.
+  ## Breaking down metric values by tags
 
-  The second argument is a list of options. Below is the description of the options common to all
-  metric types:
+  Sometimes it's not enough to have a global overview of all HTTP requests received
+  or all DB queries made. It's often more helpful to break down this data, for example,
+  we might want to have separate metric values for each unique database table and
+  operation name (`select`, `insert` etc.) to see how these particular queries behave.
 
-    * `:event_name` - the source event name. Can be represented either as a string (e.g.
-      `"http.request"`) or a list of atoms (`[:http, :request]`). By default the event name is all but
-      the last segment of the metric name.
-    * `:measurement` - the event measurement used as a source of a metric values. By default it is
-      the last segment of the metric name. It can be either an arbitrary term, a key in the event's
-      measurements map, or a function accepting the whole measurements map and returning the actual
-      value to be used.
-    * `:tags` - a subset of metadata keys by which aggregations will be broken down. Defaults to
-      an empty list.
-    * `:tag_values` - a function that receives the metadata and returns a map with the tags as keys
-      and their respective values. Defaults to returning the metadata itself.
-    * `:description` - human-readable description of the metric. Might be used by reporters for
-      documentation purposes. Defaults to `nil`.
-    * `:unit` - an atom describing the unit of selected measurement or a tuple indicating that a
-      measurement should be converted from one unit to another before a metric is updated. Currently,
-      only time unit conversions are supported. For example, setting this option to
-      `{:native, :millisecond}` means that the measurements are provided in the `:native` time unit
-      (you can read more about it in the documentation for `System.convert_time_unit/3`), but a metric
-      should have its values in milliseconds. Both elements of the conversion tuple need to be of
-      type `t:time_unit/0`.
+  This is where tagging comes into play. All metric definitions accept a `:tags` option:
+
+      count("db.query.count", tags: [:table, :operation])
+
+  The above definition means that we want to keep track of the number of queries, but
+  we want a separate counter for each unique pair of table and operation. Tag values are
+  fetched from event metadata - this means that in this example, `[:db, :query]` events
+  need to include `:table` and `:operation` keys in their payload:
+
+      :telemetry.execute([:db, :query], %{duration: 198}, %{table: "users", operation: "insert"})
+      :telemetry.execute([:db, :query], %{duration: 112}, %{table: "users", operation: "select"})
+      :telemetry.execute([:db, :query], %{duration: 201}, %{table: "sessions", operation: "insert"})
+      :telemetry.execute([:db, :query], %{duration: 212}, %{table: "sessions", operation: "insert"})
+
+  The result of aggregating the events above looks like this:
+
+  | table    | operation | count |
+  | -------- | --------- | ----- |
+  | users    | insert    | 1     |
+  | users    | select    | 1     |
+  | sessions | insert    | 2     |
+
+  The approach where we create a separate metric for some unique set of properties
+  is called a multi-dimensional data model.
+
+  ### Transforming event metadata for tagging
+
+  Finally, sometimes there is a need to modify event metadata before it's used for
+  tagging. Each metric definition accepts a function in `:tag_values` option which
+  transforms the metadata into desired shape. Note that this function is called for
+  each event, so it's important to keep it fast if the rate of events is high.
+
+  ## Converting Units
+
+  It might happen that the unit of measurement we're tracking is not the desirable unit
+  for the metric values, e.g. events are emitted by a 3rd-party library we do not control,
+  or a reporter we're using requires specific unit of measurement.
+
+  For these scenarios, each metric definition accepts a `:unit` option in a form of a tuple:
+
+      summary("http.request.done.duration", unit: {from_unit, to_unit})
+
+  This means that the measurement will be converted from `from_unit` to `to_unit` before
+  being used for updating the metric. Currently, only time conversions are supported,
+  which means that both `from_unit` and `to_unit` need to be one of `:second`, `:millisecond`,
+  `:microsecond`, `:nanosecond`, or `:native`. That's because most time measurements done
+  in the Erlang VM are done in the `:native` unit, which we need to convert to the desired
+  precision.
+
+  For example, to convert HTTP request duration from `:native` time unit to milliseconds
+  you'd write:
+
+      summary("http.request.done.duration", unit: {:native, :millisecond})
+
+  ## VM metrics
+
+  Telemetry.Metrics doesn't have a special treatment for the VM metrics - they need
+  to be based on the events like all other metrics.
+
+  `Telemetry.Poller` package (http://hexdocs.pm/telemetry_poller) exposes a bunch of
+  VM-related metrics via `:telemetry` events. For example, when you add it to your
+  dependencies, you can create a metric keeping track of total allocated VM memory:
+
+      last_value("vm.memory.total", unit: :byte)
+
+  The last value metric is usually the best fit for VM metrics exposed by the Poller,
+  as the events are emitted periodically and we're only interested in the most recent
+  measurement.
+
+  You can read more about available events and measurements in the `Telemetry.Poller`
+  documentation.
 
   ## Reporters
 
-  Reporters take metric definitions as an input, subscribe to relevant events and update the metrics
-  when the events are emitted. Updating the metric might involve publishing the metrics periodically,
-  or on demand, to external systems. `Telemetry.Metrics` defines only how metrics of particular type
+  So far, we have talked about metrics and how to describe them, but we haven't discussed
+  how those metrics are consumed and published to a system that provides data visualization,
+  aggregation, and more. The job of subscribing to events and building the actual metrics
+  is a responsibility of reporters.
+
+  Reporters take metric definitions as an input, subscribe to relevant events and update
+  the metrics when the events are emitted. For example, there could be a reporter pushing
+  metrics to StatsD, some time-series database, or exposing a HTTP endpoint for Prometheus
+  to scrape.Updating the metric might involve publishing the metrics periodically, or on demand,
+  to external systems. `Telemetry.Metrics` defines only how metrics of particular type
   should behave and reporters should provide actual implementation for these aggregations.
 
-  `Telemetry.Metrics` package does not include any reporter itself.
+  You can read the [Writing Reporters](writing_reporters.html) page for general information
+  on how to write a reporter.
   """
 
   require Logger
@@ -148,7 +232,7 @@ defmodule Telemetry.Metrics do
   Note that for the counter metric it doesn't matter what measurement is selected, as it is
   ignored by reporters anyway.
 
-  See the "Metric definitions" section in the top-level documentation of this module for more
+  See the "Metrics" section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -168,7 +252,7 @@ defmodule Telemetry.Metrics do
 
   Sum metric keeps track of the sum of selected measurement's values carried by specific events.
 
-  See the "Metric definitions" section in the top-level documentation of this module for more
+  See the "Metrics" section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -190,7 +274,7 @@ defmodule Telemetry.Metrics do
 
   Last value keeps track of the selected measurement found in the most recent event.
 
-  See the "Metric definitions" section in the top-level documentation of this module for more
+  See the "Metrics" section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -211,7 +295,7 @@ defmodule Telemetry.Metrics do
   This metric aggregates measurement's values into statistics, e.g. minimum and maximum, mean, or
   percentiles. It is up to the reporter to decide which statistics exactly are exposed.
 
-  See the "Metric definitions" section in the top-level documentation of this module for more
+  See the "Metrics" section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -234,12 +318,13 @@ defmodule Telemetry.Metrics do
   required that you specify the histograms buckets via `:buckets` option.
 
   For example, given `buckets: [0, 100, 200]`, the distribution metric produces four values:
+
     * number of measurements less than or equal to 0
     * number of measurements greater than 0 and less than or equal to 100
     * number of measurements greater than 100 and less than or equal to 200
     * number of measurements greater than 200
 
-  See the "Metric definitions" section in the top-level documentation of this module for more
+  See the "Metrics" section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -294,9 +379,8 @@ defmodule Telemetry.Metrics do
       metric_or_event_name
     else
       raise ArgumentError,
-            "expected metric or event name to be a list of atoms or a string, got #{
-              inspect(metric_or_event_name)
-            }"
+            "expected metric or event name to be a list of atoms or a string, " <>
+              "got #{inspect(metric_or_event_name)}"
     end
   end
 
