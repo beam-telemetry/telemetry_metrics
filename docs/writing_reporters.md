@@ -1,7 +1,7 @@
 # Writing reporters
 
 Reporters are a crucial part of Telemetry.Metrics "ecosystem" - without them, metric definitions
-are merely.. definitions. This guide aims to help in writing the reporter in a proper way.
+are merely... definitions. This guide aims to help in writing the reporter in a proper way.
 
 > Before writing the reporter for your favourite monitoring system, make sure that one isn't
 > already available on Hex.pm - it might make sense to contribute and improve the existing solution
@@ -28,13 +28,13 @@ If the reporter was process-based, you could provide a `start_link/1` function t
 of metric definitions:
 
 ```elixir
-  metrics = [
-    counter("..."),
-    last_value("..."),
-    summary("...")
-  ]
+metrics = [
+  counter("..."),
+  last_value("..."),
+  summary("...")
+]
 
-  PigeonReporter.start_link(metrics)
+PigeonReporter.start_link(metrics: metrics)
 ```
 
 If the reporter doesn't support metrics of particular type, it should log a warning or return an
@@ -43,58 +43,73 @@ error.
 ### Attaching event handlers
 
 Event handlers are attached using `:telemetry.attach/4` function. To reduce overhead of installing
-many event handlers, you can install a single handler for multiple metrics based on the same event.
+many event handlers, you can install a single handler for multiple metrics based on the same event. You can achieve this by grouping the metrics by event name:
+
+```elixir
+Enum.group_by(metrics, & &1.event_name)
+```
 
 Note that handler IDs need to be unique - you can generate completely random blobs of data, or use
 something that you know needs to be unique anyway, e.g. some combination of reporter name,
 event name, and something which is different for multiple instances of the same reporter (PID is a
-good choice if the reporter is process-based):
+good choice as most reporters should be backed by a process):
 
 ```elixir
 id = {PigeonReporter, metric.event_name, self()}
 ```
 
-Assuming that `metrics` is a list of metric definitions based on `event`, we can attach a handler
-like this:
+Putting it all together:
 
 ```elixir
-:telemetry.attach(id, event, &PigeonReporter.handle_event/4, %{metrics: metrics})
+for {event, metrics} <- Enum.group_by(metrics, & &1.event_name) do
+  id = {__MODULE__, event, self()}
+  :telemetry.attach(id, event, &handle_event/4, metrics)
+end
 ```
 
 ### Reacting to events
 
-There are two parts to event handling - the first one is extracting event measurements and tags,
-which is the same for all reporters, and the second one is performing logic specific to particular
-reporter.
+When consuming events, there are four steps to take into account:
 
-Let's implement the basic event handler attached in the previous section:
+1. Extract event measurements from the event. Measurements are optional, so we must skip reporting that particular measurement if it is not available;
+
+2. Extract all the relevant tags from the event metadata (if they are supported by the reporter);
+
+3. Implement the logic specific to the reporter;
+
+4. How to react to errors. One option is to let the `handle_event/4` callback fail, but that means we will no longer listen to any future event. Another option is to rescue any error and log them. That's the approach we will take in this example. However, be careful! If an event always contains bad data, then we will log an error every time it is emitted;
+
+Let's see a simsple handler implementation that takes all of those four items into account:
 
 ```elixir
-def handle_event(_event_name, measurements, metadata, %{metrics: metrics}) do
+def handle_event(_event_name, measurements, metadata, metrics) do
   for metric <- metrics do
-    measurement = extract_measurement(metric, measurements)
-    tags = extract_tags(metric, metadata)
-    # everything else is specific to particular reporter
+    try do
+      if measurement = extract_measurement(metric, measurements) do
+        tags = extract_tags(metric, metadata)
+        # everything else is specific to particular reporter
+      end
+    rescue
+      e ->
+        Logger.error("Could not format metric #{inspect metric}")
+        Logger.error(Exception.format(:error, e, __STACKTRACE__))
+    end
   end
 end
 ```
 
-As described before, first we extract the measurement and tags, and later perform reporter-specific
-logic. The implementation of `extract_measurement/2` might look as follows:
+The implementation of `extract_measurement/2` might look as follows:
 
 ```elixir
 def extract_measurement(metric, measurements) do
   case metric.measurement do
-    fun when is_function(fun, 1) ->
-      fun.(measurements)
-    key ->
-      measurements[key]
+    fun when is_function(fun, 1) -> fun.(measurements)
+    key -> measurements[key]
   end
 end
 ```
 
-Since `:measurement` in the metric definition can be both arbitrary term (to be used as key to fetch
-the measurement) or a function, we need to handle both cases.
+Since `:measurement` in the metric definition can be both an arbitrary term (to be used as key to fetch the measurement) or a function, we need to handle both cases.
 
 > Note: Telemetry.Metrics can't guarantee that the extracted measurement's value is a number. Each
 > reporter can handle this scenario properly, either by logging a warning, detaching the handler etc.
@@ -110,10 +125,6 @@ end
 
 First we need to apply last-minute transformation to the metadata using the `:tag_values` function,
 then we fetch all transformed metadata, ignoring any tag that may not be available.
-
-It is very important that the code executed on every event does not fail, as that would cause
-the handler to be permanently removed and prevent the metrics from being updated. If necessary,
-wrap code paths that may fail in a `try/catch` and log whenever there is an error. 
 
 ### Detaching the handlers on termination
 
@@ -131,6 +142,4 @@ document if some metric types are not supported at all.
 
 ## Examples
 
-To our knowledge, there are not many reporters in the wild yet.
-[TelemetryMetricsStatsd](https://github.com/arkgil/telemetry_metrics_statsd) is a reporter which
-might serve as an example when implementing your own.
+This repository ships with a `Telemetry.Metrics.ConsoleReporter` that prints data to the terminal as an example. You may search for other reporters on hex.pm.
