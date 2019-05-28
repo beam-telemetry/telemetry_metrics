@@ -16,7 +16,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
 
     {:ok, device} = StringIO.open("")
     opts = [metrics: metrics, device: device]
-    formatter = start_supervised!({Telemetry.Metrics.ConsoleReporter, opts})
+    {:ok, formatter} = Telemetry.Metrics.ConsoleReporter.start_link(opts)
     {:ok, formatter: formatter, device: device}
   end
 
