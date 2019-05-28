@@ -134,7 +134,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
   defp unit(unit), do: " #{unit}"
 
   defp metric(Telemetry.Metrics.Counter), do: "counter"
-  defp metric(Telemetry.Metrics.Distribution), do: "counter"
+  defp metric(Telemetry.Metrics.Distribution), do: "distribution"
   defp metric(Telemetry.Metrics.LastValue), do: "last_value"
   defp metric(Telemetry.Metrics.Sum), do: "sum"
   defp metric(Telemetry.Metrics.Summary), do: "summary"
