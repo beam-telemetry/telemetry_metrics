@@ -34,7 +34,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
       And tag values: %{}
 
   In other words, every time there is an event for any of the registered
-  metrics, it print the event measurement and metadata, and then it prints
+  metrics, it prints the event measurement and metadata, and then it prints
   information about each metric to the user.
   """
   use GenServer
@@ -91,17 +91,25 @@ defmodule Telemetry.Metrics.ConsoleReporter do
         [
           header
           | try do
-              if measurement = extract_measurement(metric, measurements) do
-                tags = extract_tags(metric, metadata)
+              measurement = extract_measurement(metric, measurements)
+              tags = extract_tags(metric, metadata)
 
-                """
-                With value: #{inspect(measurement)}#{unit(metric.unit)}#{info(measurement)}
-                And tag values: #{inspect(tags)}
-                """
-              else
-                """
-                No value available (metric skipped)
-                """
+              cond do
+                is_nil(measurement) ->
+                  """
+                  No value available (metric skipped)
+                  """
+
+                metric.__struct__ == Telemetry.Metrics.Counter ->
+                  """
+                  Tag values: #{inspect(tags)}
+                  """
+
+                true ->
+                  """
+                  With value: #{inspect(measurement)}#{unit(metric.unit)}#{info(measurement)}
+                  Tag values: #{inspect(tags)}
+                  """
               end
             rescue
               e ->

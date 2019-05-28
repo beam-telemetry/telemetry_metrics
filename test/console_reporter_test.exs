@@ -37,31 +37,30 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
 
            Metric measurement: :binary (last_value)
            With value: 100 byte
-           And tag values: %{}
+           Tag values: %{}
 
            Metric measurement: :total (counter)
-           With value: 200
-           And tag values: %{}
+           Tag values: %{}
 
            """
   end
 
   test "prints missing and bad measurements", %{device: device} do
-    :telemetry.execute([:vm, :memory], %{total: :hundred}, %{foo: :bar})
+    :telemetry.execute([:vm, :memory], %{binary: :hundred}, %{foo: :bar})
     {_in, out} = StringIO.contents(device)
 
     assert out == """
            [Telemetry.Metrics.ConsoleReporter] Got new event!
            Event name: vm.memory
-           All measurements: %{total: :hundred}
+           All measurements: %{binary: :hundred}
            All metadata: %{foo: :bar}
 
            Metric measurement: :binary (last_value)
-           No value available (metric skipped)
+           With value: :hundred byte (WARNING! measurement should be a number)
+           Tag values: %{}
 
            Metric measurement: :total (counter)
-           With value: :hundred (WARNING! measurement should be a number)
-           And tag values: %{}
+           No value available (metric skipped)
 
            """
   end
@@ -78,7 +77,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
 
            Metric measurement: :response_time (summary)
            With value: 1000
-           And tag values: %{bar: :baz}
+           Tag values: %{bar: :baz}
 
            """
   end
