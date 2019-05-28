@@ -107,7 +107,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
               e ->
                 Logger.error([
                   "Could not format metric #{inspect(metric)}\n",
-                  Exception.format(:error, e, __STACKTRACE__)
+                  Exception.format(:error, e, System.stacktrace())
                 ])
 
                 """
