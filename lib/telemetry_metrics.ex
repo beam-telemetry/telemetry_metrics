@@ -167,8 +167,10 @@ defmodule Telemetry.Metrics do
   to external systems. `Telemetry.Metrics` defines only how metrics of particular type
   should behave and reporters should provide actual implementation for these aggregations.
 
-  You can read the [Writing Reporters](writing_reporters.html) page for general information
-  on how to write a reporter.
+  This repository ships with a `Telemetry.Metrics.ConsoleReporter` that prints data to the
+  terminal as an example. You may search for other reporters on hex.pm. You can also read the
+  [Writing Reporters](writing_reporters.html) page for general information on how to write a
+  reporter. 
   """
 
   require Logger
