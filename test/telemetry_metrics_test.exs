@@ -379,19 +379,28 @@ defmodule Telemetry.MetricsTest do
     end
   end
 
-  test "distribution/2 raises if bucket boundaries are not increasing" do
+  test "distribution/2 allows {range, step} buckets" do
+    assert Metrics.distribution("http.request.latency", buckets: {100..300, 100}).buckets ==
+             [100, 200, 300]
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("http.request.latency", buckets: {300..100, 100})
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("http.request.latency", buckets: {100..350, 100})
+    end
+  end
+
+  test "distribution/2 allows list buckets" do
     assert_raise ArgumentError, fn ->
       Metrics.distribution("http.request.latency", buckets: [0, 200, 100])
     end
-  end
 
-  test "distribution/2 raises if bucket boundaries are empty" do
     assert_raise ArgumentError, fn ->
       Metrics.distribution("http.request.latency", buckets: [])
     end
-  end
 
-  test "distribution/2 raises if bucket boundary is not a number" do
     assert_raise ArgumentError, fn ->
       Metrics.distribution("http.request.latency", buckets: [0, 100, "200"])
     end

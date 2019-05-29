@@ -319,12 +319,16 @@ defmodule Telemetry.Metrics do
   Distribution metric builds a histogram of selected measurement's values. Because of that, it is
   required that you specify the histograms buckets via `:buckets` option.
 
-  For example, given `buckets: [0, 100, 200]`, the distribution metric produces four values:
+  TThe buckets is either a list of integers, such as `[100, 200, 300]`, or a two-element tuple,
+  containing the range as first element and the step as second, such as `{100..300, 100}`, which
+  emits the same buckets as `[100, 200, 300]`.
+
+  Given `buckets: [100, 200, 300]`, the distribution metric produces four values:
 
     * number of measurements less than or equal to 0
-    * number of measurements greater than 0 and less than or equal to 100
     * number of measurements greater than 100 and less than or equal to 200
-    * number of measurements greater than 200
+    * number of measurements greater than 200 and less than or equal to 300
+    * number of measurements greater than 300
 
   See the "Metrics" section in the top-level documentation of this module for more
   information.
@@ -336,12 +340,18 @@ defmodule Telemetry.Metrics do
         buckets: [100, 200, 300],
         tags: [:controller, :action],
       )
+
+      distribution(
+        "http.request.duration",
+        buckets: {100..300, 100},
+        tags: [:controller, :action],
+      )
+
   """
   @spec distribution(metric_name(), distribution_options()) :: Distribution.t()
   def distribution(metric_name, options) do
     fields = common_fields(metric_name, options)
-    buckets = Keyword.fetch!(options, :buckets)
-    validate_distribution_buckets!(buckets)
+    buckets = validate_distribution_buckets!(Keyword.fetch!(options, :buckets))
     struct(Distribution, Map.put(fields, :buckets, buckets))
   end
 
@@ -518,17 +528,35 @@ defmodule Telemetry.Metrics do
   @spec validate_distribution_buckets!(term()) :: :ok | no_return()
   defp validate_distribution_buckets!([_ | _] = buckets) do
     unless Enum.all?(buckets, &is_number/1) do
-      raise ArgumentError, "expected buckets to be a list of numbers, got #{inspect(buckets)}"
+      raise ArgumentError,
+            "expected buckets list to contain only numbers, got #{inspect(buckets)}"
     end
 
     unless buckets == Enum.sort(buckets) do
       raise ArgumentError, "expected buckets to be ordered ascending, got #{inspect(buckets)}"
     end
 
-    :ok
+    buckets
+  end
+
+  defp validate_distribution_buckets!({first..last, step} = buckets) when is_integer(step) do
+    if first >= last do
+      raise ArgumentError, "expected buckets range to be ascending, got #{inspect(buckets)}"
+    end
+
+    if rem(last - first, step) != 0 do
+      raise ArgumentError,
+            "expected buckets range first and last to fall within all range steps " <>
+              "(i.e. rem(last - first, step) == 0), got #{inspect(buckets)}"
+    end
+
+    first
+    |> Stream.iterate(&(&1 + step))
+    |> Enum.take_while(&(&1 <= last))
   end
 
   defp validate_distribution_buckets!(term) do
-    raise ArgumentError, "expected buckets to be a non-empty list, got #{inspect(term)}"
+    raise ArgumentError,
+          "expected buckets to be a non-empty list or a {range, step} tuple, got #{inspect(term)}"
   end
 end
