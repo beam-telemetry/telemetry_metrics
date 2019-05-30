@@ -319,13 +319,13 @@ defmodule Telemetry.Metrics do
   Distribution metric builds a histogram of selected measurement's values. Because of that, it is
   required that you specify the histograms buckets via `:buckets` option.
 
-  TThe buckets is either a list of integers, such as `[100, 200, 300]`, or a two-element tuple,
+  The buckets is either a list of integers, such as `[100, 200, 300]`, or a two-element tuple,
   containing the range as first element and the step as second, such as `{100..300, 100}`, which
   emits the same buckets as `[100, 200, 300]`.
 
   Given `buckets: [100, 200, 300]`, the distribution metric produces four values:
 
-    * number of measurements less than or equal to 0
+    * number of measurements less than or equal to 100
     * number of measurements greater than 100 and less than or equal to 200
     * number of measurements greater than 200 and less than or equal to 300
     * number of measurements greater than 300
