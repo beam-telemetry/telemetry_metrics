@@ -28,7 +28,7 @@ Telemetry.Metrics.sum("http.request.payload_size", tags: [:host, :method])
 The above definiton means that we want to keep track of the sum, but for each unique pair of
 request host and method (assuming that `:host` and `:method` keys are present in event's metadata).
 
-There are four metric types provided by Telemetry.Metrics:
+There are five metric types provided by Telemetry.Metrics:
 
 - counter, which counts the total number of emitted events
 - sum which keeps track of the sum of selected measurement
@@ -43,7 +43,7 @@ metrics is a responsibility of reporters. This is the crucial part of this libra
 doesn't aggregate events itself but relies on 3rd party reporters to perform this work in a way that
 makes the most sense for a particular monitoring system.
 
-See the documentation on [hexdocs](https://hexdocs.pm/telemetry_metrics/0.2.1) for more details.
+See the documentation on [hexdocs](https://hexdocs.pm/telemetry_metrics) for more details.
 
 ## Copyright and License
 
