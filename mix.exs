@@ -5,6 +5,7 @@ defmodule Telemetry.Metrics.MixProject do
 
   def project do
     [
+      name: "Telemetry.Metrics",
       app: :telemetry_metrics,
       version: @version,
       elixir: "~> 1.5",
@@ -43,7 +44,6 @@ defmodule Telemetry.Metrics.MixProject do
 
   defp docs do
     [
-      name: "Telemetry.Metrics",
       main: "Telemetry.Metrics",
       canonical: "http://hexdocs.pm/telemetry_metrics",
       source_url: "https://github.com/beam-telemetry/telemetry_metrics",
