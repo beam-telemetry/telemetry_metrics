@@ -10,17 +10,17 @@ defmodule Telemetry.Metrics do
   a function which send an HTTP request, measures the time it took to get a
   response, and emits an event with the information:
 
-      :telemetry.execute([:http, :request, :done], %{duration: duration})
+      :telemetry.execute([:http, :request, :stop], %{duration: duration})
 
   You could define a counter metric, which counts how many HTTP requests were
   completed:
 
-      Telemetry.Metrics.counter("http.request.done.duration")
+      Telemetry.Metrics.counter("http.request.stop.duration")
 
   or you could use a distribution metric to see how many queries were completed
   in particular time buckets:
 
-      Telemetry.Metrics.distribution("http.request.done.duration", buckets: [100, 200, 300])
+      Telemetry.Metrics.distribution("http.request.stop.duration", buckets: [100, 200, 300])
 
   This documentation is going to cover all the available metrics and how to use
   them, as well as options, and how to integrate those metrics with reporters.
@@ -38,14 +38,14 @@ defmodule Telemetry.Metrics do
     * `distribution/2` which builds a histogram of selected measurement
 
   The first argument to all metric functions is the metric name. Metric
-  name can be provided as a string (e.g. `"http.request.done.duration"`) or a
-  list of atoms (`[:http, :request, :done, :duration]`). The metric name is
+  name can be provided as a string (e.g. `"http.request.stop.duration"`) or a
+  list of atoms (`[:http, :request, :stop, :duration]`). The metric name is
   automatically used to infer the telemetry event and measurement. For example,
-  In the `"http.request.done.duration"` example, the source event name is
-  `[:http, :request, :done]` and metric values are drawn from `:duration`
+  In the `"http.request.stop.duration"` example, the source event name is
+  `[:http, :request, :stop]` and metric values are drawn from `:duration`
   measurement. Like this:
 
-      [:http , :request, :done]      :duration
+      [:http , :request, :stop]      :duration
       <----- event name ------> <-- measurement -->
 
   You can also explicitly specify the event name and measurement
@@ -121,56 +121,118 @@ defmodule Telemetry.Metrics do
 
   For these scenarios, each metric definition accepts a `:unit` option in a form of a tuple:
 
-      summary("http.request.done.duration", unit: {from_unit, to_unit})
+      summary("http.request.stop.duration", unit: {from_unit, to_unit})
 
   This means that the measurement will be converted from `from_unit` to `to_unit` before
   being used for updating the metric. Currently, only time conversions are supported,
   which means that both `from_unit` and `to_unit` need to be one of `:second`, `:millisecond`,
-  `:microsecond`, `:nanosecond`, or `:native`. That's because most time measurements done
+  `:microsecond`, `:nanosecond`, or `:native`. That's because most time measurements
   in the Erlang VM are done in the `:native` unit, which we need to convert to the desired
   precision.
 
   For example, to convert HTTP request duration from `:native` time unit to milliseconds
   you'd write:
 
-      summary("http.request.done.duration", unit: {:native, :millisecond})
+      summary("http.request.stop.duration", unit: {:native, :millisecond})
 
   ## VM metrics
 
-  Telemetry.Metrics doesn't have a special treatment for the VM metrics - they need
+  `Telemetry.Metrics` doesn't have a special treatment for the VM metrics - they need
   to be based on the events like all other metrics.
 
-  `Telemetry.Poller` package (http://hexdocs.pm/telemetry_poller) exposes a bunch of
-  VM-related metrics via `:telemetry` events. For example, when you add it to your
-  dependencies, you can create a metric keeping track of total allocated VM memory:
+  `:telemetry_poller` package (http://hexdocs.pm/telemetry_poller) exposes a bunch of
+  VM-related metrics and also provides custom periodic measurements. You can add
+  telemetry poller as a dependency:
+
+      {:telemetry_poller, "~> 0.4"}
+
+  By simply adding `:telemetry_poller` as a dependency, two events will become available:
+
+    * `[:vm, :memory]` - contains the total memory, as well as the memory used for
+      binaries, processes, etc. See `erlang:memory/0` for all keys;
+    * `[:vm, :total_run_queue_lengths]` - returns the run queue lengths for CPU and
+      IO schedulers. It contains the `total`, `cpu` and `io` measurements;
+
+  You can consume those events with `Telemetry.Metrics` with the following sample metrics:
 
       last_value("vm.memory.total", unit: :byte)
+      last_value("vm.total_run_queue_lengths.total")
+      last_value("vm.total_run_queue_lengths.cpu")
+      last_value("vm.total_run_queue_lengths.io")
 
-  The last value metric is usually the best fit for VM metrics exposed by the Poller,
-  as the events are emitted periodically and we're only interested in the most recent
-  measurement.
+  If you want to change the frequency of those measurements, you can set the
+  following configuration in your config file:
 
-  You can read more about available events and measurements in the `Telemetry.Poller`
-  documentation.
+      config :telemetry_poller, :default, period: 5_000 # the default
+
+  Or disable it completely with:
+
+      config :telemetry_poller, :default, false
+
+  The `:telemetry_poller` package also allows you to run your own poller, which is
+  useful to retrieve process information or perform custom measurements periodically.
+  Inside a supervision tree, you could do:
+
+      measurements = [
+        {:process_info,
+         event: [:my_app, :worker],
+         name: MyApp.Worker,
+         keys: [:message_queue_len, :memory]},
+
+        {MyApp, :measure_users, []}
+      ]
+
+      Supervisor.start_link([
+        # Run the given measurements every 10 seconds
+        {:telemetry_poller, measurements: measurements(), period: 10_000}
+      ], strategy: :one_for_one)
+
+  Where `MyApp.measure_active_users/0` could be written like this:
+
+      defmodule MyApp do
+        def measure_users do
+          :telemetry.execute([:my_app, :users], %{total: MyApp.users_count()}, %{})
+        end
+      end
+
+  Now with measurements in place, you can define the metrics for the
+  events above:
+
+      last_value("my_app.worker.memory", unit: :byte)
+      last_value("my_app.worker.message_queue_len")
+      last_value("my_app.users.total")
 
   ## Reporters
 
   So far, we have talked about metrics and how to describe them, but we haven't discussed
   how those metrics are consumed and published to a system that provides data visualization,
-  aggregation, and more. The job of subscribing to events and building the actual metrics
+  aggregation, and more. The job of subscribing to events and procesing the actual metrics
   is a responsibility of reporters.
 
-  Reporters take metric definitions as an input, subscribe to relevant events and update
-  the metrics when the events are emitted. For example, there could be a reporter pushing
-  metrics to StatsD, some time-series database, or exposing a HTTP endpoint for Prometheus
-  to scrape.Updating the metric might involve publishing the metrics periodically, or on demand,
-  to external systems. `Telemetry.Metrics` defines only how metrics of particular type
-  should behave and reporters should provide actual implementation for these aggregations.
+  Generally speaking, a reporter is a process that you would start in your supervision
+  tree with a list of metrics as input. For example, `Telemetry.Metriics` ships with a
+  `Telemetry.Metrics.ConsoleReporter` module, which prints data to the terminal as an
+  example. You would start it as follows:
 
-  This repository ships with a `Telemetry.Metrics.ConsoleReporter` that prints data to the
-  terminal as an example. You may search for other reporters on hex.pm. You can also read the
-  [Writing Reporters](writing_reporters.html) page for general information on how to write a
-  reporter. 
+      metrics = [
+        last_value("my_app.worker.memory", unit: :byte),
+        last_value("my_app.worker.message_queue_len"),
+        last_value("my_app.users.total")
+      ]
+
+      Supervisor.start_link([
+        {Telemetry.Metrics.ConsoleReporter, metrics: metrics}
+      ], strategy: :one_for_one)
+
+  Reporters take metric definitions as an input, subscribe to relevant events and
+  aggregate data when the events are emitted. Reporters may push metrics to StatsD,
+  some time-series database, or exposing a HTTP endpoint for Prometheus to scrape.
+  In a nutshell, `Telemetry.Metrics` defines only how metrics of particular type
+  should behave and reporters provide the actual implementation for these aggregations.
+
+  You may search for available reporters on hex.pm. You can also read the
+  [Writing Reporters](writing_reporters.html) page for general information
+  on how to write a reporter.
   """
 
   require Logger

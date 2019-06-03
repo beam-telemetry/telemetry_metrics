@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/beam-telemetry/telemetry_metrics/tree/v0.3.0)
+
+### Added
+
+* add `Telemetry.Metrics.ConsoleReporter` as an example reporter that prints data to the terminal
+* add `summary/2` metric type
+* add shortcut representation for `:buckets` in the `distribution/2` metric
+
 ## [0.2.1](https://github.com/beam-telemetry/telemetry_metrics/tree/v0.2.1)
 
 ### Fixed
