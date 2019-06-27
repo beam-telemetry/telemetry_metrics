@@ -66,15 +66,15 @@ workflows:
   build_and_test:
     jobs:
       - telemetry_metrics/build_and_test:
-          name: "1.8-otp-22"
-          elixir: "1.8.2"
+          name: "1.9-otp-22"
+          elixir: "1.9.0"
           otp: "22"
-          codecov_flag: "1_8_otp22"
+          codecov_flag: "1_9_otp22"
       - telemetry_metrics/build_and_test:
-          name: "1.8-otp-20"
-          elixir: "1.8.2"
+          name: "1.9-otp-20"
+          elixir: "1.9.0"
           otp: "20"
-          codecov_flag: "1_8_otp20"
+          codecov_flag: "1_9_otp20"
       - telemetry_metrics/build_and_test:
           name: "1.5-otp-20"
           elixir: "1.5.3"
