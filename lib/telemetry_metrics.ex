@@ -210,7 +210,7 @@ defmodule Telemetry.Metrics do
   is a responsibility of reporters.
 
   Generally speaking, a reporter is a process that you would start in your supervision
-  tree with a list of metrics as input. For example, `Telemetry.Metriics` ships with a
+  tree with a list of metrics as input. For example, `Telemetry.Metrics` ships with a
   `Telemetry.Metrics.ConsoleReporter` module, which prints data to the terminal as an
   example. You would start it as follows:
 
