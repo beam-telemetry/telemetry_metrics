@@ -83,7 +83,7 @@ defmodule Telemetry.Metrics do
 
   This is where tagging comes into play. All metric definitions accept a `:tags` option:
 
-      count("db.query.count", tags: [:table, :operation])
+      counter("db.query.count", tags: [:table, :operation])
 
   The above definition means that we want to keep track of the number of queries, but
   we want a separate counter for each unique pair of table and operation. Tag values are
