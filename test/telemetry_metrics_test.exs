@@ -329,7 +329,16 @@ defmodule Telemetry.MetricsTest do
       end
 
       test "doesn't convert a unit if both units are the same" do
-        for unit <- [:native, :second, :millisecond, :microsecond, :nanosecond] do
+        for unit <- [
+              :native,
+              :second,
+              :millisecond,
+              :microsecond,
+              :nanosecond,
+              :byte,
+              :kilobyte,
+              :megabyte
+            ] do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
@@ -352,14 +361,97 @@ defmodule Telemetry.MetricsTest do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
-              [unit: {from, to}] ++
-                unquote(extra_options)
+              [unit: {from, to}] ++ unquote(extra_options)
             ])
 
           measurements = %{latency: measurement}
 
           assert metric.measurement.(measurements) == converted_unit(measurement, from, to)
         end
+      end
+
+      test "converts a measurement under key from byte to kilobyte" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:byte, :kilobyte}] ++ unquote(extra_options)
+          ])
+
+        measurement = 76_000_000
+
+        measurements = %{latency: measurement}
+
+        assert metric.measurement.(measurements) == 76_000
+      end
+
+      test "converts a measurement under key from byte to megabyte" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:byte, :megabyte}] ++ unquote(extra_options)
+          ])
+
+        measurement = 76_000_000
+
+        measurements = %{latency: measurement}
+
+        assert metric.measurement.(measurements) == 76
+      end
+
+      test "converts a measurement under key from kilobyte to byte" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:kilobyte, :byte}] ++ unquote(extra_options)
+          ])
+
+        measurement = 76_000
+
+        measurements = %{latency: measurement}
+
+        assert metric.measurement.(measurements) == 76_000_000
+      end
+
+      test "converts a measurement under key from kilobyte to megabyte" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:kilobyte, :megabyte}] ++ unquote(extra_options)
+          ])
+
+        measurement = 76_000
+
+        measurements = %{latency: measurement}
+
+        assert metric.measurement.(measurements) == 76
+      end
+
+      test "converts a measurement under key from megabyte to byte" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:megabyte, :byte}] ++ unquote(extra_options)
+          ])
+
+        measurement = 76
+
+        measurements = %{latency: measurement}
+
+        assert metric.measurement.(measurements) == 76_000_000
+      end
+
+      test "converts a measurement under key from megabyte to kilobyte" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:megabyte, :kilobyte}] ++ unquote(extra_options)
+          ])
+
+        measurement = 76
+
+        measurements = %{latency: measurement}
+
+        assert metric.measurement.(measurements) == 76_000
       end
 
       test "converts a result of measurement function from one regular time unit to another" do
@@ -375,6 +467,78 @@ defmodule Telemetry.MetricsTest do
 
           assert metric.measurement.(%{}) == converted_unit(measurement, from, to)
         end
+      end
+
+      test "converts a result of measurement function from byte to kilobyte" do
+        measurement = fn _ -> 76_000_000 end
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:byte, :kilobyte}, measurement: measurement] ++ unquote(extra_options)
+          ])
+
+        assert metric.measurement.(%{}) == 76_000
+      end
+
+      test "converts a result of measurement function from byte to megabyte" do
+        measurement = fn _ -> 76_000_000 end
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:byte, :megabyte}, measurement: measurement] ++ unquote(extra_options)
+          ])
+
+        assert metric.measurement.(%{}) == 76
+      end
+
+      test "converts a result of measurement function from kilobyte to byte" do
+        measurement = fn _ -> 76_000 end
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:kilobyte, :byte}, measurement: measurement] ++ unquote(extra_options)
+          ])
+
+        assert metric.measurement.(%{}) == 76_000_000
+      end
+
+      test "converts a result of measurement function from kilobyte to megabyte" do
+        measurement = fn _ -> 76_000 end
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:kilobyte, :megabyte}, measurement: measurement] ++ unquote(extra_options)
+          ])
+
+        assert metric.measurement.(%{}) == 76
+      end
+
+      test "converts a result of measurement function from megabyte to byte" do
+        measurement = fn _ -> 76 end
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:megabyte, :byte}, measurement: measurement] ++ unquote(extra_options)
+          ])
+
+        assert metric.measurement.(%{}) == 76_000_000
+      end
+
+      test "converts a result of measurement function from megabyte to kilobyte" do
+        measurement = fn _ -> 76 end
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.latency",
+            [unit: {:megabyte, :kilobyte}, measurement: measurement] ++ unquote(extra_options)
+          ])
+
+        assert metric.measurement.(%{}) == 76_000
       end
     end
   end
