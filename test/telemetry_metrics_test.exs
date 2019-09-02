@@ -329,7 +329,16 @@ defmodule Telemetry.MetricsTest do
       end
 
       test "doesn't convert a unit if both units are the same" do
-        for unit <- [:native, :second, :millisecond, :microsecond, :nanosecond] do
+        for unit <- [
+              :native,
+              :second,
+              :millisecond,
+              :microsecond,
+              :nanosecond,
+              :byte,
+              :kilobyte,
+              :megabyte
+            ] do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
@@ -352,13 +361,35 @@ defmodule Telemetry.MetricsTest do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
-              [unit: {from, to}] ++
-                unquote(extra_options)
+              [unit: {from, to}] ++ unquote(extra_options)
             ])
 
           measurements = %{latency: measurement}
 
           assert metric.measurement.(measurements) == converted_unit(measurement, from, to)
+        end
+      end
+
+      test "converts a measurement under key from one byte unit to another" do
+        units = [
+          {{:byte, 76_000_000}, {:kilobyte, 76_000}},
+          {{:byte, 76_000_000}, {:megabyte, 76}},
+          {{:kilobyte, 76_000}, {:byte, 76_000_000}},
+          {{:kilobyte, 76_000}, {:megabyte, 76}},
+          {{:megabyte, 76}, {:byte, 76_000_000}},
+          {{:megabyte, 76}, {:kilobyte, 76_000}}
+        ]
+
+        for {{from, original}, {to, converted}} <- units do
+          metric =
+            apply(Metrics, unquote(metric_type), [
+              "http.request.latency",
+              [unit: {from, to}] ++ unquote(extra_options)
+            ])
+
+          measurements = %{latency: original}
+
+          assert metric.measurement.(measurements) == converted
         end
       end
 
@@ -374,6 +405,29 @@ defmodule Telemetry.MetricsTest do
             ])
 
           assert metric.measurement.(%{}) == converted_unit(measurement, from, to)
+        end
+      end
+
+      test "converts a result of measurement function from one regular byte unit to another" do
+        units = [
+          {{:byte, 76_000_000}, {:kilobyte, 76_000}},
+          {{:byte, 76_000_000}, {:megabyte, 76}},
+          {{:kilobyte, 76_000}, {:byte, 76_000_000}},
+          {{:kilobyte, 76_000}, {:megabyte, 76}},
+          {{:megabyte, 76}, {:byte, 76_000_000}},
+          {{:megabyte, 76}, {:kilobyte, 76_000}}
+        ]
+
+        for {{from, original}, {to, converted}} <- units do
+          measurement = fn _ -> original end
+
+          metric =
+            apply(Metrics, unquote(metric_type), [
+              "http.request.latency",
+              [unit: {from, to}, measurement: measurement] ++ unquote(extra_options)
+            ])
+
+          assert metric.measurement.(%{}) == converted
         end
       end
     end
