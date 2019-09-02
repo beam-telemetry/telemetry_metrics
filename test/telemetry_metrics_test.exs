@@ -370,14 +370,14 @@ defmodule Telemetry.MetricsTest do
         end
       end
 
-      test "converts a measurement under key one storage time unit to another" do
+      test "converts a measurement under key from one byte unit to another" do
         units = [
           {{:byte, 76_000_000}, {:kilobyte, 76_000}},
           {{:byte, 76_000_000}, {:megabyte, 76}},
           {{:kilobyte, 76_000}, {:byte, 76_000_000}},
           {{:kilobyte, 76_000}, {:megabyte, 76}},
           {{:megabyte, 76}, {:byte, 76_000_000}},
-          {{:megabyte, 76}, {:kilobyte, 76_000}},
+          {{:megabyte, 76}, {:kilobyte, 76_000}}
         ]
 
         for {{from, original}, {to, converted}} <- units do
@@ -408,14 +408,14 @@ defmodule Telemetry.MetricsTest do
         end
       end
 
-      test "converts a result of measurement function from one regular storage unit to another" do
+      test "converts a result of measurement function from one regular byte unit to another" do
         units = [
           {{:byte, 76_000_000}, {:kilobyte, 76_000}},
           {{:byte, 76_000_000}, {:megabyte, 76}},
           {{:kilobyte, 76_000}, {:byte, 76_000_000}},
           {{:kilobyte, 76_000}, {:megabyte, 76}},
           {{:megabyte, 76}, {:byte, 76_000_000}},
-          {{:megabyte, 76}, {:kilobyte, 76_000}},
+          {{:megabyte, 76}, {:kilobyte, 76_000}}
         ]
 
         for {{from, original}, {to, converted}} <- units do

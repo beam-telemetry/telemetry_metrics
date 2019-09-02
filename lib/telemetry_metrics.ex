@@ -71,7 +71,7 @@ defmodule Telemetry.Metrics do
     * `:unit` - an atom describing the unit of selected measurement, typically in
       singular, such as `:millisecond`, `:byte`, `:kilobyte`, etc. It may also be
       a tuple indicating that a measurement should be converted from one unit to
-      another before a metric is updated. Currently, only time and storage unit
+      another before a metric is updated. Currently, only time and byte unit
       conversions are supported. We discuss those in detail in the "Converting Units"
       section.
 
@@ -125,7 +125,7 @@ defmodule Telemetry.Metrics do
       summary("http.request.stop.duration", unit: {from_unit, to_unit})
 
   This means that the measurement will be converted from `from_unit` to `to_unit` before
-  being used for updating the metric. Currently, only time and storage conversions are
+  being used for updating the metric. Currently, only time and byte conversions are
   supported.
 
   ### Time Conversions
@@ -139,10 +139,10 @@ defmodule Telemetry.Metrics do
 
       summary("http.request.stop.duration", unit: {:native, :millisecond})
 
-  ### Storage Conversions
+  ### Byte Conversions
 
   Some metrics, like VM memory's usage are reported in bytes. You might want to convert this
-  to megabytes, for example. The supported storage units are: `:byte`, `:kilobyte` and `:megabyte`.
+  to megabytes, for example. The supported byte units are: `:byte`, `:kilobyte` and `:megabyte`.
 
   In order to convert a metric value from bytes to megabytes, you can write the following:
 
@@ -270,8 +270,8 @@ defmodule Telemetry.Metrics do
   @type unit :: atom()
   @type time_unit_conversion() :: {time_unit(), time_unit()}
   @type time_unit() :: :second | :millisecond | :microsecond | :nanosecond | :native
-  @type storage_unit() :: :megabyte | :kilobyte | :byte
-  @type storage_unit_conversion() :: {storage_unit(), storage_unit()}
+  @type byte_unit() :: :megabyte | :kilobyte | :byte
+  @type byte_unit_conversion() :: {byte_unit(), byte_unit()}
   @type counter_options :: [metric_option()]
   @type sum_options :: [metric_option()]
   @type last_value_options :: [metric_option()]
@@ -283,7 +283,7 @@ defmodule Telemetry.Metrics do
           | {:tags, tags()}
           | {:tag_values, tag_values()}
           | {:description, description()}
-          | {:unit, unit() | time_unit_conversion() | storage_unit_conversion()}
+          | {:unit, unit() | time_unit_conversion() | byte_unit_conversion()}
 
   @typedoc """
   Common fields for metric specifications
@@ -567,13 +567,13 @@ defmodule Telemetry.Metrics do
       time_unit?(from_unit) and time_unit?(to_unit) ->
         {to_unit, time_unit_conversion_ratio(from_unit, to_unit)}
 
-      storage_unit?(from_unit) and storage_unit?(to_unit) ->
-        {to_unit, storage_unit_conversion_ratio(from_unit, to_unit)}
+      byte_unit?(from_unit) and byte_unit?(to_unit) ->
+        {to_unit, byte_unit_conversion_ratio(from_unit, to_unit)}
 
       true ->
         raise ArgumentError,
               "expected both elements of the unit conversion tuple" <>
-                "to represent time or storage units, got #{inspect(t)}"
+                "to represent time or byte units, got #{inspect(t)}"
     end
   end
 
@@ -600,17 +600,17 @@ defmodule Telemetry.Metrics do
     end
   end
 
-  @spec storage_unit_conversion_ratio(storage_unit(), storage_unit()) :: number()
-  defp storage_unit_conversion_ratio(from_unit, to_unit) do
-    multiplier = storage_unit_factor(to_unit)
-    divisor = storage_unit_factor(from_unit)
+  @spec byte_unit_conversion_ratio(byte_unit(), byte_unit()) :: number()
+  defp byte_unit_conversion_ratio(from_unit, to_unit) do
+    multiplier = byte_unit_factor(to_unit)
+    divisor = byte_unit_factor(from_unit)
     1 * multiplier / divisor
   end
 
-  @spec storage_unit_factor(storage_unit()) :: number()
-  defp storage_unit_factor(:megabyte), do: 1
-  defp storage_unit_factor(:kilobyte), do: 1_000
-  defp storage_unit_factor(:byte), do: 1_000_000
+  @spec byte_unit_factor(byte_unit()) :: number()
+  defp byte_unit_factor(:megabyte), do: 1
+  defp byte_unit_factor(:kilobyte), do: 1_000
+  defp byte_unit_factor(:byte), do: 1_000_000
 
   @spec time_unit?(term()) :: boolean()
   defp time_unit?(:native), do: true
@@ -620,11 +620,11 @@ defmodule Telemetry.Metrics do
   defp time_unit?(:nanosecond), do: true
   defp time_unit?(_), do: false
 
-  @spec storage_unit?(term()) :: boolean()
-  defp storage_unit?(:byte), do: true
-  defp storage_unit?(:kilobyte), do: true
-  defp storage_unit?(:megabyte), do: true
-  defp storage_unit?(_), do: false
+  @spec byte_unit?(term()) :: boolean()
+  defp byte_unit?(:byte), do: true
+  defp byte_unit?(:kilobyte), do: true
+  defp byte_unit?(:megabyte), do: true
+  defp byte_unit?(_), do: false
 
   @spec validate_distribution_buckets!(term()) :: :ok | no_return()
   defp validate_distribution_buckets!([_ | _] = buckets) do
