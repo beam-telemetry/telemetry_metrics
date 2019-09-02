@@ -540,13 +540,12 @@ defmodule Telemetry.Metrics do
     end
   end
 
-  # Don't wrap measurement if no conversion is required.
   @spec maybe_convert_measurement(measurement(), conversion_ratio :: non_neg_integer()) ::
           measurement()
-  defp maybe_convert_measurement(measurement, 1), do: measurement
-
-  @spec maybe_convert_measurement(measurement(), conversion_ratio :: float()) :: measurement()
-  defp maybe_convert_measurement(measurement, 1.0), do: measurement
+  defp maybe_convert_measurement(measurement, 1) do
+    # Don't wrap measurement if no conversion is required.
+    measurement
+  end
 
   defp maybe_convert_measurement(measurement, conversion_ratio)
        when is_function(measurement, 1) do
@@ -601,6 +600,8 @@ defmodule Telemetry.Metrics do
   end
 
   @spec byte_unit_conversion_ratio(byte_unit(), byte_unit()) :: number()
+  defp byte_unit_conversion_ratio(from_unit, to_unit) when from_unit == to_unit, do: 1
+
   defp byte_unit_conversion_ratio(from_unit, to_unit) do
     multiplier = byte_unit_factor(to_unit)
     divisor = byte_unit_factor(from_unit)
