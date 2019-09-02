@@ -600,7 +600,7 @@ defmodule Telemetry.Metrics do
   end
 
   @spec byte_unit_conversion_ratio(byte_unit(), byte_unit()) :: number()
-  defp byte_unit_conversion_ratio(from_unit, to_unit) when from_unit == to_unit, do: 1
+  defp byte_unit_conversion_ratio(unit, unit), do: 1
 
   defp byte_unit_conversion_ratio(from_unit, to_unit) do
     multiplier = byte_unit_factor(to_unit)
