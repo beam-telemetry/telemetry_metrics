@@ -129,7 +129,7 @@ then we fetch all transformed metadata, ignoring any tag that may not be availab
 ### Detaching the handlers on termination
 
 To leave the system in a clean state, the reporter should detach the event handlers it installed
-when it's being stopped or terminated unexpectedely. This can be done by trapping exists in the
+when it's being stopped or terminated unexpectedely. This can be done by trapping exits in the
 `init` function and implementing the terminate callback, or having a dedicated process responsible
 only for the cleanup (e.g. by using monitors).
 
