@@ -37,8 +37,12 @@ metrics = [
 PigeonReporter.start_link(metrics: metrics)
 ```
 
-If the reporter doesn't support metrics of particular type, it should log a warning or return an
-error.
+If the reporter doesn't support metrics of particular type, it may either:
+
+  1. Log a warning and discard the metric
+  2. Log a warning and convert the metric to an equivalent type. For example, a reporter may convert an histogram into a summary or simpler metric in case it is not supported
+
+We recommend all reporters to include a summary table of which metrics are supported and their equivalents on the adapter terminology.
 
 ### Attaching event handlers
 
