@@ -243,9 +243,87 @@ defmodule Telemetry.Metrics do
   In a nutshell, `Telemetry.Metrics` defines only how metrics of particular type
   should behave and reporters provide the actual implementation for these aggregations.
 
-  You may search for available reporters on hex.pm. You can also read the
-  [Writing Reporters](writing_reporters.html) page for general information
-  on how to write a reporter.
+  Official reporters, maintained by the Observability Working Group of the Erlang
+  Ecosystem Foundation, can be found on the [BEAM Telemetry organization on GitHub](https://github.com/beam-telemetry/).
+  You may also [find community reporters on hex.pm](https://hex.pm/packages?search=telemetry_metrics).
+  You can also read the [Writing Reporters](writing_reporters.html) page for general
+  information on how to write a reporter.
+
+  ## Wiring it all up
+
+  Over the previous sections we discussed how to setup metrics and pass them to reporters
+  and how configure a poller for measurements. We can wire it all up into a single
+  module as shown below. The example below would be used in the context of a Phoenix
+  application, where we have web metrics, database metrics (through Ecto) as well as
+  from the database, Phoenix metrics as well as VM metrics.
+
+  The first step is to add both `:telemetry_metrics` and `:telemetry_poller` as
+  dependencies:
+
+      [
+        {:telemetry_poller, "~> 0.4"},
+        {:telemetry_metrics, "~> 0.4"}
+      ]
+
+  Then you could define a mobule that wires everything up:
+
+      defmodule MyAppWeb.Telemetry do
+        use Supervisor
+        import Telemetry.Metrics
+
+        def start_link(arg) do
+          Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
+        end
+
+        def init(_arg) do
+          children = [
+            {:telemetry_poller,
+             measurements: periodic_measurements(),
+             period: 10_000},
+            # Or TelemetryMetricsPrometheus or TelemetryMetricsFooBar
+            {TelemetryMetricsStatsD, metrics: metrics()
+          ]
+
+          Supervisor.init(children, strategy: :one_for_one)
+        end
+
+        defp metrics do
+          [
+            # VM Metrics
+            last_value("vm.memory.total", unit: :byte),
+            last_value("vm.total_run_queue_lengths.total"),
+            last_value("vm.total_run_queue_lengths.cpu"),
+            last_value("vm.total_run_queue_lengths.io"),
+
+            last_value("my_app.worker.memory", unit: :byte),
+            last_value("my_app.worker.message_queue_len"),
+
+            # Database Time Metrics
+            summary("my_app.repo.query.total_time", unit: {:native, :millisecond}),
+            summary("my_app.repo.query.decode_time", unit: {:native, :millisecond}),
+            summary("my_app.repo.query.query_time", unit: {:native, :millisecond}),
+            summary("my_app.repo.query.queue_time", unit: {:native, :millisecond}),
+
+            # Phoenix Time Metrics
+            summary("phoenix.endpoint.stop.duration",
+                    unit: {:native, :millisecond}),
+            summary(
+              "phoenix.route_dispatch.stop.duration",
+              unit: {:native, :millisecond},
+              tags: [:plug]
+            )
+          ]
+        end
+
+        defp periodic_measurements do
+          [
+            {:process_info,
+             event: [:my_app, :worker],
+             name: Rumbl.Worker,
+             keys: [:message_queue_len, :memory]}
+          ]
+        end
+      end
   """
 
   require Logger
