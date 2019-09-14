@@ -252,7 +252,7 @@ defmodule Telemetry.Metrics do
   ## Wiring it all up
 
   Over the previous sections we discussed how to setup metrics and pass them to reporters
-  and how configure a poller for measurements. We can wire it all up into a single
+  and how to configure a poller for measurements. We can wire it all up into a single
   module as shown below. The example below would be used in the context of a Phoenix
   application, where we have web metrics, database metrics (through Ecto) as well as
   from the database, Phoenix metrics as well as VM metrics.
@@ -265,7 +265,7 @@ defmodule Telemetry.Metrics do
         {:telemetry_metrics, "~> 0.4"}
       ]
 
-  Then you could define a mobule that wires everything up:
+  Then you could define a module that wires everything up:
 
       defmodule MyAppWeb.Telemetry do
         use Supervisor
@@ -281,7 +281,7 @@ defmodule Telemetry.Metrics do
              measurements: periodic_measurements(),
              period: 10_000},
             # Or TelemetryMetricsPrometheus or TelemetryMetricsFooBar
-            {TelemetryMetricsStatsD, metrics: metrics()
+            {TelemetryMetricsStatsD, metrics: metrics()}
           ]
 
           Supervisor.init(children, strategy: :one_for_one)
