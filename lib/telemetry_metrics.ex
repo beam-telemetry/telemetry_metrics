@@ -308,7 +308,7 @@ defmodule Telemetry.Metrics do
             summary("phoenix.endpoint.stop.duration",
                     unit: {:native, :millisecond}),
             summary(
-              "phoenix.route_dispatch.stop.duration",
+              "phoenix.router_dispatch.stop.duration",
               unit: {:native, :millisecond},
               tags: [:plug]
             )
