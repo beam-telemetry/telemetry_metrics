@@ -649,7 +649,7 @@ defmodule Telemetry.Metrics do
 
       true ->
         raise ArgumentError,
-              "expected both elements of the unit conversion tuple" <>
+              "expected both elements of the unit conversion tuple " <>
                 "to represent time or byte units, got #{inspect(t)}"
     end
   end
