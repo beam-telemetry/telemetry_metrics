@@ -5,7 +5,16 @@ defmodule Telemetry.Metrics.Sum do
 
   alias Telemetry.Metrics
 
-  defstruct [:name, :event_name, :measurement, :tags, :tag_values, :description, :unit]
+  defstruct [
+    :name,
+    :event_name,
+    :measurement,
+    :tags,
+    :tag_values,
+    :description,
+    :unit,
+    :reporter_options
+  ]
 
   @type t :: %__MODULE__{
           name: Metrics.normalized_metric_name(),
@@ -14,6 +23,7 @@ defmodule Telemetry.Metrics.Sum do
           tags: Metrics.tags(),
           tag_values: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           description: Metrics.description(),
-          unit: Metrics.unit()
+          unit: Metrics.unit(),
+          reporter_options: Metrics.reporter_options()
         }
 end

@@ -74,6 +74,7 @@ defmodule Telemetry.Metrics do
       another before a metric is updated. Currently, only time and byte unit
       conversions are supported. We discuss those in detail in the "Converting Units"
       section.
+    * `:reporter_options` - a keyword list of reporter-specific options for the metric.
 
   ## Breaking down metric values by tags
 
@@ -355,6 +356,7 @@ defmodule Telemetry.Metrics do
   @type last_value_options :: [metric_option()]
   @type summary_options :: [metric_option()]
   @type distribution_options :: [metric_option() | {:buckets, Distribution.buckets()}]
+  @type reporter_options :: keyword()
   @type metric_option ::
           {:event_name, :telemetry.event_name()}
           | {:measurement, measurement()}
@@ -362,6 +364,7 @@ defmodule Telemetry.Metrics do
           | {:tag_values, tag_values()}
           | {:description, description()}
           | {:unit, unit() | time_unit_conversion() | byte_unit_conversion()}
+          | {:reporter_options, reporter_options()}
 
   @typedoc """
   Common fields for metric specifications
@@ -376,7 +379,8 @@ defmodule Telemetry.Metrics do
           tags: tags(),
           tag_values: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
           description: description(),
-          unit: unit()
+          unit: unit(),
+          reporter_options: reporter_options()
         }
 
   # API
@@ -579,7 +583,8 @@ defmodule Telemetry.Metrics do
     [
       tags: [],
       tag_values: & &1,
-      description: nil
+      description: nil,
+      reporter_options: []
     ]
   end
 
@@ -588,6 +593,9 @@ defmodule Telemetry.Metrics do
     if tags = Keyword.get(options, :tags), do: validate_tags!(tags)
     if tag_values = Keyword.get(options, :tag_values), do: validate_tag_values!(tag_values)
     if description = Keyword.get(options, :description), do: validate_description!(description)
+
+    if reporter_options = Keyword.get(options, :reporter_options),
+      do: validate_reporter_options!(reporter_options)
   end
 
   @spec validate_tags!(term()) :: :ok | no_return()
@@ -615,6 +623,16 @@ defmodule Telemetry.Metrics do
       :ok
     else
       raise ArgumentError, "expected description to be a string, got #{inspect(term)}"
+    end
+  end
+
+  @spec validate_reporter_options!(term()) :: :ok | no_return()
+  defp validate_reporter_options!(reporter_options) do
+    if Keyword.keyword?(reporter_options) do
+      :ok
+    else
+      raise ArgumentError,
+            "expected reporter options to be a keyword list, got #{inspect(reporter_options)}"
     end
   end
 
