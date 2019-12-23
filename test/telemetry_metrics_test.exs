@@ -55,6 +55,13 @@ defmodule Telemetry.MetricsTest do
         end
       end
 
+      test "raises when reporter options is invalid" do
+        assert_raise ArgumentError, fn ->
+          options = [reporter_options: [:avg]] ++ unquote(extra_options)
+          apply(Metrics, unquote(metric_type), ["my.metric", options])
+        end
+      end
+
       test "returns #{metric_type} specification with default fields" do
         name = "http.request.latency"
         options = [] ++ unquote(extra_options)
@@ -67,6 +74,7 @@ defmodule Telemetry.MetricsTest do
         assert nil == metric.description
         assert :unit == metric.unit
         assert :latency = metric.measurement
+        assert [] = metric.reporter_options
         tag_values_fun = metric.tag_values
         assert %{key: 1, another_key: 2} == tag_values_fun.(%{key: 1, another_key: 2})
       end
@@ -79,6 +87,7 @@ defmodule Telemetry.MetricsTest do
         tags = [:controller, "controller_action"]
         description = "a metric"
         unit = :second
+        reporter_options = [sample_rate: 0.1]
 
         options =
           [
@@ -87,7 +96,8 @@ defmodule Telemetry.MetricsTest do
             tags: tags,
             tag_values: tag_values,
             description: description,
-            unit: unit
+            unit: unit,
+            reporter_options: reporter_options
           ] ++ unquote(extra_options)
 
         metric = apply(Metrics, unquote(metric_type), [name, options])
@@ -98,6 +108,7 @@ defmodule Telemetry.MetricsTest do
         assert description == metric.description
         assert unit == metric.unit
         assert :other_value = metric.measurement
+        assert reporter_options == metric.reporter_options
         tag_values_fun = metric.tag_values
 
         assert %{:controller => UserController, "controller_action" => "create"} ==

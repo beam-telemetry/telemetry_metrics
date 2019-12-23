@@ -44,6 +44,10 @@ If the reporter doesn't support metrics of particular type, it may either:
 
 We recommend all reporters to include a summary table of which metrics are supported and their equivalents on the adapter terminology.
 
+Reporter-specific options for individual metrics may be passed on the `:reporter_options` key of the metric definitions. These options
+can be used to define options such as sample rates, percentiles, rates, etc. Reporters should validate any options they accept and
+provide useful exception messages.
+
 ### Attaching event handlers
 
 Event handlers are attached using `:telemetry.attach/4` function. To reduce overhead of installing
