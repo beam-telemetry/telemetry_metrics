@@ -7,7 +7,7 @@ defmodule Telemetry.Metrics do
   a view of the system's behaviour over time.
 
   To give a more concrete example, imagine that somewhere in your code there is
-  a function which send an HTTP request, measures the time it took to get a
+  a function which sends an HTTP request, measures the time it took to get a
   response, and emits an event with the information:
 
       :telemetry.execute([:http, :request, :stop], %{duration: duration})
