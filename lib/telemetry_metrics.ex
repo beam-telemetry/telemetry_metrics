@@ -367,21 +367,9 @@ defmodule Telemetry.Metrics do
           | {:reporter_options, reporter_options()}
 
   @typedoc """
-  Common fields for metric specifications
-
-  Reporters should assume that these fields are present in all metric specifications.
+  One of the base metric definitions.
   """
-  @type t :: %{
-          __struct__: module(),
-          name: normalized_metric_name(),
-          measurement: measurement(),
-          event_name: :telemetry.event_name(),
-          tags: tags(),
-          tag_values: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
-          description: description(),
-          unit: unit(),
-          reporter_options: reporter_options()
-        }
+  @type t() :: Counter.t() | LastValue.t() | Sum.t() | Summary.t() | Distribution.t()
 
   # API
 
