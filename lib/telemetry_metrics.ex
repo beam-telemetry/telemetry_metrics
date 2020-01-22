@@ -355,7 +355,9 @@ defmodule Telemetry.Metrics do
   @type sum_options :: [metric_option()]
   @type last_value_options :: [metric_option()]
   @type summary_options :: [metric_option()]
-  @type distribution_options :: [metric_option() | {:buckets, Distribution.buckets()}]
+  @type distribution_options :: [
+          metric_option() | {:buckets, Distribution.buckets() | {Range.t(), step :: non_neg_integer()}}
+        ]
   @type reporter_options :: keyword()
   @type metric_option ::
           {:event_name, :telemetry.event_name()}
@@ -723,7 +725,7 @@ defmodule Telemetry.Metrics do
   defp byte_unit?(:megabyte), do: true
   defp byte_unit?(_), do: false
 
-  @spec validate_distribution_buckets!(term()) :: :ok | no_return()
+  @spec validate_distribution_buckets!(term()) :: Distribution.buckets() | no_return()
   defp validate_distribution_buckets!([_ | _] = buckets) do
     unless Enum.all?(buckets, &is_number/1) do
       raise ArgumentError,
