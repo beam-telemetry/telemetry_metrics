@@ -8,7 +8,7 @@ defmodule Telemetry.Metrics.MixProject do
       name: "Telemetry.Metrics",
       app: :telemetry_metrics,
       version: @version,
-      elixir: "~> 1.5",
+      elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
       preferred_cli_env: preferred_cli_env(),
       deps: deps(),
