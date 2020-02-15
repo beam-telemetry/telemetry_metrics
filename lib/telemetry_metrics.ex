@@ -636,13 +636,18 @@ defmodule Telemetry.Metrics do
   defp maybe_convert_measurement(measurement, conversion_ratio)
        when is_function(measurement, 1) do
     fn measurements ->
-      measurement.(measurements) * conversion_ratio
+      if measurement = measurement.(measurements) do
+        measurement * conversion_ratio
+      end
     end
   end
 
   defp maybe_convert_measurement(measurement, conversion_ratio) do
     fn measurements ->
-      measurements[measurement] * conversion_ratio
+      case measurements do
+        %{^measurement => nil} -> nil
+        %{^measurement => value} -> value * conversion_ratio
+      end
     end
   end
 
