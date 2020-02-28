@@ -66,6 +66,8 @@ defmodule Telemetry.Metrics do
     * `:tag_values` - a function that receives the metadata and returns a map with
       the tags as keys and their respective values. Defaults to returning the
       metadata itself.
+    * `:filter` - a predicate function that evaluates the metadata to determine if
+      the metric should not be recorded for a given event. Defaults to `nil`.
     * `:description` - human-readable description of the metric. Might be used by
       reporters for documentation purposes. Defaults to `nil`.
     * `:unit` - an atom describing the unit of selected measurement, typically in
@@ -216,6 +218,54 @@ defmodule Telemetry.Metrics do
       last_value("my_app.worker.message_queue_len")
       last_value("my_app.users.total")
 
+  ## Filtering Metric Events
+
+  There may be occasions where you want to record metrics differently or not at all based
+  upon metadata. Rather than depending on changing event names with prefixes, you can instead
+  provide a filter predicate function which returns true when you want the metric to be
+  processed for this event and false when you do not.
+
+  Let's examine some a few examples where filtering can be helpful.
+
+  ### Filtering on Metadata
+
+  Let's assume you are using an HTTP client library in your application which has the following
+  event: `[:http_client, :request, :stop]`. You use this library in multiple places and
+  you'd like to monitor the request duration.
+
+  You can use the event provided by the library but you have very different acceptable
+  performance requirements for a critical request, so it would be better to provide different
+  bucket sizes and a different metric name for monitoring. The client library includes a user
+  configured `:name` option which you can set and is passed in the event metadata.
+
+  Let's create a default distribution metric and one for the high performance call.
+
+      distribution(
+        "http.client.request.duration",
+        event: [:http_client, :request, :stop],
+        buckets: [10, 20, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
+        filter: fn meta ->
+          meta.name != :fast_client
+        end)
+      )
+
+      distribution(
+        "http.fast.client.request.duration",
+        event: [:http_client, :request, :stop],
+        buckets: [2, 5, 10, 15, 20, 25, 30, 40, 50, 100, 200],
+        filter: &(match?(%{name: :fast_client}, &1))
+      )
+
+  With this configuration, you can now monitor these requests separately.
+
+  ### Reporter Support
+
+  Event filtering must be supported by the reporter you are using. Check your reporter's
+  documentation before relying on this functionality.
+
+  The `filter` function should be evaluated by reporters _prior_ to `tag_values` using the
+  raw `:telemetry.medatadata()` values from the event.
+
   ## Reporters
 
   So far, we have talked about metrics and how to describe them, but we haven't discussed
@@ -301,9 +351,21 @@ defmodule Telemetry.Metrics do
 
             # Database Time Metrics
             summary("my_app.repo.query.total_time", unit: {:native, :millisecond}),
-            summary("my_app.repo.query.decode_time", unit: {:native, :millisecond}),
-            summary("my_app.repo.query.query_time", unit: {:native, :millisecond}),
-            summary("my_app.repo.query.queue_time", unit: {:native, :millisecond}),
+            summary(
+              "my_app.repo.query.decode_time",
+              unit: {:native, :millisecond},
+              filter: &(is_number(&1))
+            ),
+            summary(
+              "my_app.repo.query.query_time",
+              unit: {:native, :millisecond},
+              filter: &(is_number(&1))
+            ),
+            summary(
+              "my_app.repo.query.queue_time",
+              unit: {:native, :millisecond},
+              filter: &(is_number(&1))
+            ),
 
             # Phoenix Time Metrics
             summary("phoenix.endpoint.stop.duration",
@@ -345,6 +407,7 @@ defmodule Telemetry.Metrics do
   @type tag :: term()
   @type tags :: [tag()]
   @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
+  @type filter :: (:telemetry.event_metadata() -> boolean())
   @type description :: nil | String.t()
   @type unit :: atom()
   @type time_unit_conversion() :: {time_unit(), time_unit()}
@@ -356,7 +419,8 @@ defmodule Telemetry.Metrics do
   @type last_value_options :: [metric_option()]
   @type summary_options :: [metric_option()]
   @type distribution_options :: [
-          metric_option() | {:buckets, Distribution.buckets() | {Range.t(), step :: non_neg_integer()}}
+          metric_option()
+          | {:buckets, Distribution.buckets() | {Range.t(), step :: non_neg_integer()}}
         ]
   @type reporter_options :: keyword()
   @type metric_option ::
@@ -364,6 +428,7 @@ defmodule Telemetry.Metrics do
           | {:measurement, measurement()}
           | {:tags, tags()}
           | {:tag_values, tag_values()}
+          | {:filter, filter()}
           | {:description, description()}
           | {:unit, unit() | time_unit_conversion() | byte_unit_conversion()}
           | {:reporter_options, reporter_options()}
@@ -512,6 +577,8 @@ defmodule Telemetry.Metrics do
     {event_name, [measurement]} = Enum.split(metric_name, -1)
     {event_name, options} = Keyword.pop(options, :event_name, event_name)
     {measurement, options} = Keyword.pop(options, :measurement, measurement)
+    {filter, options} = Keyword.pop(options, :filter)
+    filter = validate_event_filter!(filter)
     event_name = validate_metric_or_event_name!(event_name)
     {unit, options} = Keyword.pop(options, :unit, :unit)
     {unit, conversion_ratio} = validate_unit!(unit)
@@ -525,6 +592,7 @@ defmodule Telemetry.Metrics do
       name: metric_name,
       event_name: event_name,
       measurement: measurement,
+      filter: filter,
       unit: unit
     })
   end
@@ -563,6 +631,14 @@ defmodule Telemetry.Metrics do
           "expected metric name to be a string or a list of atoms, got #{inspect(term)}"
   end
 
+  defp validate_event_filter!(nil), do: nil
+  defp validate_event_filter!(filter) when is_function(filter, 1), do: filter
+
+  defp validate_event_filter!(term) do
+    raise ArgumentError,
+          "expected filter to be a function accepting metadata, got #{inspect(term)}"
+  end
+
   @spec fill_in_default_metric_options([metric_option()]) :: [metric_option()]
   defp fill_in_default_metric_options(options) do
     Keyword.merge(default_metric_options(), options)
@@ -573,6 +649,7 @@ defmodule Telemetry.Metrics do
     [
       tags: [],
       tag_values: & &1,
+      filter: nil,
       description: nil,
       reporter_options: []
     ]

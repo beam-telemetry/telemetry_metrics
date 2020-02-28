@@ -152,6 +152,21 @@ defmodule Telemetry.MetricsTest do
         assert %{constant: "metadata"} == tag_values_fun.(event_metadata)
       end
 
+      test "setting function as filter returns that function in metric spec" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "my.repo.query",
+            [
+              filter: &match?(%{repo: :my_app_read_only_repo}, &1)
+            ] ++ unquote(extra_options)
+          ])
+
+        filter_fun = metric.filter
+
+        assert filter_fun.(%{repo: :my_app_read_only_repo})
+        refute filter_fun.(%{repo: :my_app_repo})
+      end
+
       test "using metric name with leading, trailing or subsequent dots raises" do
         for name <- [".metric.name", "metric.name.", "metric..name"] do
           assert_raise ArgumentError, fn ->
@@ -264,6 +279,15 @@ defmodule Telemetry.MetricsTest do
               [event_name: event_name] ++ unquote(extra_options)
             ])
           end
+        end
+      end
+
+      test "raises when event filter is not a function with an arity of 2" do
+        assert_raise ArgumentError, fn ->
+          apply(Metrics, unquote(metric_type), [
+            "ecto.query.queue_time",
+            [filter: fn -> true end] ++ unquote(extra_options)
+          ])
         end
       end
 
