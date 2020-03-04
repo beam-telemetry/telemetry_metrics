@@ -10,7 +10,7 @@ in a proper way.
 
 Let's get started!
 
-### Specification
+## Specification
 
   - Reporters MUST accept a list of metric definitions as input when being started
   - Reporters MUST attach handlers to events contained in these definitions

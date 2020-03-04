@@ -13,7 +13,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
           %{foo: :bar} -> %{bar: :baz}
         end,
         tags: [:bar],
-        filter: fn metadata ->
+        drop: fn metadata ->
           metadata[:boom] == :pow
         end
       )

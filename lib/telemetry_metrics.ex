@@ -66,8 +66,10 @@ defmodule Telemetry.Metrics do
     * `:tag_values` - a function that receives the metadata and returns a map with
       the tags as keys and their respective values. Defaults to returning the
       metadata itself.
-    * `:filter` - a predicate function that evaluates the metadata to determine if
-      the metric should not be recorded for a given event. Defaults to `nil`.
+    * `:keep` - a predicate function that evaluates the metadata to conditionally
+      record a given event. `:keep` and `:drop` cannot be combined. Defaults to `nil`.
+    * `:drop` - a predicate function that evaluates the metadata to conditionally
+      skip recording a given event. `:keep` and `:drop` cannot be combined. Defaults to `nil`.
     * `:description` - human-readable description of the metric. Might be used by
       reporters for documentation purposes. Defaults to `nil`.
     * `:unit` - an atom describing the unit of selected measurement, typically in
@@ -244,19 +246,21 @@ defmodule Telemetry.Metrics do
         "http.client.request.duration",
         event: [:http_client, :request, :stop],
         buckets: [10, 20, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
-        filter: fn meta ->
-          meta.name != :fast_client
-        end)
+        drop: &(match?(%{name: :fast_client}, &1))
       )
 
       distribution(
         "http.fast.client.request.duration",
         event: [:http_client, :request, :stop],
         buckets: [2, 5, 10, 15, 20, 25, 30, 40, 50, 100, 200],
-        filter: &(match?(%{name: :fast_client}, &1))
+        keep: &(match?(%{name: :fast_client}, &1))
       )
 
-  With this configuration, you can now monitor these requests separately.
+  With this configuration, you can now monitor these requests separately. In the first example,
+  any events where the client's name is `:fast_client` will be dropped for that metric.
+  Conversely, any matching events in the second example metric will be kept.
+
+  Note: only `:keep` OR `:drop` may be set, never both.
 
   ### Reporter Support
 
@@ -351,21 +355,9 @@ defmodule Telemetry.Metrics do
 
             # Database Time Metrics
             summary("my_app.repo.query.total_time", unit: {:native, :millisecond}),
-            summary(
-              "my_app.repo.query.decode_time",
-              unit: {:native, :millisecond},
-              filter: &(is_number(&1))
-            ),
-            summary(
-              "my_app.repo.query.query_time",
-              unit: {:native, :millisecond},
-              filter: &(is_number(&1))
-            ),
-            summary(
-              "my_app.repo.query.queue_time",
-              unit: {:native, :millisecond},
-              filter: &(is_number(&1))
-            ),
+            summary("my_app.repo.query.decode_time", unit: {:native, :millisecond}),
+            summary("my_app.repo.query.query_time", unit: {:native, :millisecond}),
+            summary("my_app.repo.query.queue_time", unit: {:native, :millisecond}),
 
             # Phoenix Time Metrics
             summary("phoenix.endpoint.stop.duration",
@@ -407,7 +399,8 @@ defmodule Telemetry.Metrics do
   @type tag :: term()
   @type tags :: [tag()]
   @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
-  @type filter :: (:telemetry.event_metadata() -> boolean())
+  @type keep :: (:telemetry.event_metadata() -> boolean())
+  @type drop :: (:telemetry.event_metadata() -> boolean())
   @type description :: nil | String.t()
   @type unit :: atom()
   @type time_unit_conversion() :: {time_unit(), time_unit()}
@@ -428,7 +421,8 @@ defmodule Telemetry.Metrics do
           | {:measurement, measurement()}
           | {:tags, tags()}
           | {:tag_values, tag_values()}
-          | {:filter, filter()}
+          | {:keep, keep()}
+          | {:drop, drop()}
           | {:description, description()}
           | {:unit, unit() | time_unit_conversion() | byte_unit_conversion()}
           | {:reporter_options, reporter_options()}
@@ -577,8 +571,12 @@ defmodule Telemetry.Metrics do
     {event_name, [measurement]} = Enum.split(metric_name, -1)
     {event_name, options} = Keyword.pop(options, :event_name, event_name)
     {measurement, options} = Keyword.pop(options, :measurement, measurement)
-    {filter, options} = Keyword.pop(options, :filter)
-    filter = validate_event_filter!(filter)
+    {keep_filter, options} = Keyword.pop(options, :keep)
+    {drop_filter, options} = Keyword.pop(options, :drop)
+    :ok = validate_event_filter_options!(keep_filter, drop_filter)
+    keep_filter = validate_event_filter!(keep_filter)
+    drop_filter = validate_event_filter!(drop_filter)
+    validate_event_filter_options!(keep_filter, drop_filter)
     event_name = validate_metric_or_event_name!(event_name)
     {unit, options} = Keyword.pop(options, :unit, :unit)
     {unit, conversion_ratio} = validate_unit!(unit)
@@ -592,7 +590,7 @@ defmodule Telemetry.Metrics do
       name: metric_name,
       event_name: event_name,
       measurement: measurement,
-      filter: filter,
+      filter: filter(keep_filter, drop_filter),
       unit: unit
     })
   end
@@ -638,6 +636,17 @@ defmodule Telemetry.Metrics do
     raise ArgumentError,
           "expected filter to be a function accepting metadata, got #{inspect(term)}"
   end
+
+  def validate_event_filter_options!(keep, drop) when is_nil(keep) or is_nil(drop), do: :ok
+
+  def validate_event_filter_options!(_keep, _drop) do
+    raise ArgumentError,
+          "events can be filtered with the keep or drop option, but not both"
+  end
+
+  def filter(nil, nil), do: nil
+  def filter(nil, drop), do: drop
+  def filter(keep, nil), do: fn meta -> not keep.(meta) end
 
   @spec fill_in_default_metric_options([metric_option()]) :: [metric_option()]
   defp fill_in_default_metric_options(options) do

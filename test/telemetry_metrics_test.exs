@@ -153,18 +153,43 @@ defmodule Telemetry.MetricsTest do
       end
 
       test "setting function as filter returns that function in metric spec" do
-        metric =
+        keep_metric =
           apply(Metrics, unquote(metric_type), [
             "my.repo.query",
             [
-              filter: &match?(%{repo: :my_app_read_only_repo}, &1)
+              keep: &match?(%{repo: :my_app_read_only_repo}, &1)
             ] ++ unquote(extra_options)
           ])
 
-        filter_fun = metric.filter
+        drop_metric =
+          apply(Metrics, unquote(metric_type), [
+            "my.repo.query",
+            [
+              drop: &match?(%{repo: :my_app_read_only_repo}, &1)
+            ] ++ unquote(extra_options)
+          ])
 
-        assert filter_fun.(%{repo: :my_app_read_only_repo})
-        refute filter_fun.(%{repo: :my_app_repo})
+        keep_filter_fun = keep_metric.filter
+
+        refute keep_filter_fun.(%{repo: :my_app_read_only_repo})
+        assert keep_filter_fun.(%{repo: :my_app_repo})
+
+        drop_filter_fun = drop_metric.filter
+
+        assert drop_filter_fun.(%{repo: :my_app_read_only_repo})
+        refute drop_filter_fun.(%{repo: :my_app_repo})
+      end
+
+      test "setting both keep and drop options raises" do
+        assert_raise ArgumentError, fn ->
+          apply(Metrics, unquote(metric_type), [
+            "my.event.value",
+            [
+              keep: &match?(%{some: :value}, &1),
+              drop: &match?(%{some: :other_value}, &1)
+            ] ++ unquote(extra_options)
+          ])
+        end
       end
 
       test "using metric name with leading, trailing or subsequent dots raises" do
@@ -283,12 +308,14 @@ defmodule Telemetry.MetricsTest do
       end
 
       test "raises when event filter is not a function with an arity of 2" do
-        assert_raise ArgumentError, fn ->
-          apply(Metrics, unquote(metric_type), [
-            "ecto.query.queue_time",
-            [filter: fn -> true end] ++ unquote(extra_options)
-          ])
-        end
+        Enum.each([keep: fn -> true end, drop: fn -> true end], fn filter ->
+          assert_raise ArgumentError, fn ->
+            apply(Metrics, unquote(metric_type), [
+              "ecto.query.queue_time",
+              [filter] ++ unquote(extra_options)
+            ])
+          end
+        end)
       end
 
       test "raises when first element of unit-conversion tuple is not a valid time unit" do
