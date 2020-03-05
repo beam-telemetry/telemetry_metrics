@@ -65,7 +65,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            Tag values: %{}
 
            Metric measurement: :total (counter)
-           Measurement value missing (metric skipped - handler may detach!)
+           Measurement value missing (metric skipped)
 
            """
   end

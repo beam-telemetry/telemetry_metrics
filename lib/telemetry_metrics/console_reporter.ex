@@ -97,10 +97,10 @@ defmodule Telemetry.Metrics.ConsoleReporter do
               cond do
                 is_nil(measurement) ->
                   """
-                  Measurement value missing (metric skipped - handler may detach!)
+                  Measurement value missing (metric skipped)
                   """
 
-                is_filtered?(metric, metadata) ->
+                filtered?(metric, metadata) ->
                   """
                   Event filtered (metric skipped)
                   """
@@ -133,8 +133,8 @@ defmodule Telemetry.Metrics.ConsoleReporter do
     IO.puts(device, [prelude | parts])
   end
 
-  defp is_filtered?(%{filter: nil}, _metadata), do: false
-  defp is_filtered?(metric, metadata), do: metric.filter.(metadata)
+  defp filtered?(%{filter: nil}, _metadata), do: false
+  defp filtered?(metric, metadata), do: metric.filter.(metadata)
 
   defp extract_measurement(metric, measurements) do
     case metric.measurement do

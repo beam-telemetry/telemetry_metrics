@@ -112,7 +112,7 @@ def handle_event(_event_name, measurements, metadata, metrics) do
       measurement = extract_measurement(metric, measurements)
       tags = extract_tags(metric, metadata)
 
-      if !is_filtered(metric, metadata) do
+      if filtered?(metric, metadata) do
 
         # everything else is specific to particular reporter
       end
@@ -125,11 +125,11 @@ def handle_event(_event_name, measurements, metadata, metrics) do
 end
 ```
 
-The implementation of `is_filtered?/2` might look like:
+The implementation of `filtered?/2` might look like:
 
 ```elixir
-defp is_filtered?(%{filter: nil}, _metadata), do: false
-defp is_filtered?(metric, metadata), do: metric.filter.(metadata)
+defp filtered?(%{filter: nil}, _metadata), do: false
+defp filtered?(metric, metadata), do: metric.filter.(metadata)
 ```
 
 The implementation of `extract_measurement/2` might look as follows:
