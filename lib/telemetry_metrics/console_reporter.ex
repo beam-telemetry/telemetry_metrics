@@ -100,9 +100,9 @@ defmodule Telemetry.Metrics.ConsoleReporter do
                   Measurement value missing (metric skipped)
                   """
 
-                filtered?(metric, metadata) ->
+                not keep?(metric, metadata) ->
                   """
-                  Event filtered (metric skipped)
+                  Event dropped
                   """
 
                 metric.__struct__ == Telemetry.Metrics.Counter ->
@@ -133,8 +133,8 @@ defmodule Telemetry.Metrics.ConsoleReporter do
     IO.puts(device, [prelude | parts])
   end
 
-  defp filtered?(%{filter: nil}, _metadata), do: false
-  defp filtered?(metric, metadata), do: metric.filter.(metadata)
+  defp keep?(%{keep: nil}, _metadata), do: true
+  defp keep?(metric, metadata), do: metric.keep.(metadata)
 
   defp extract_measurement(metric, measurements) do
     case metric.measurement do

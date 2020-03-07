@@ -98,7 +98,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            All metadata: %{boom: :pow, foo: :bar}
 
            Metric measurement: :response_time (summary)
-           Event filtered (metric skipped)
+           Event dropped
 
            """
   end

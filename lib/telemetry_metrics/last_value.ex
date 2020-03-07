@@ -11,7 +11,7 @@ defmodule Telemetry.Metrics.LastValue do
     :measurement,
     :tags,
     :tag_values,
-    :filter,
+    :keep,
     :description,
     :unit,
     :reporter_options
@@ -23,7 +23,7 @@ defmodule Telemetry.Metrics.LastValue do
           measurement: Metrics.measurement(),
           tags: Metrics.tags(),
           tag_values: (:telemetry.event_metadata() -> :telemetry.event_metadata()),
-          filter: (:telemetry.event_metadata() -> boolean()),
+          keep: (:telemetry.event_metadata() -> boolean()),
           description: Metrics.description(),
           unit: Metrics.unit(),
           reporter_options: Metrics.reporter_options()

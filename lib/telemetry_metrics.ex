@@ -220,14 +220,14 @@ defmodule Telemetry.Metrics do
       last_value("my_app.worker.message_queue_len")
       last_value("my_app.users.total")
 
-  ## Filtering Metric Events
+  ## Optionally Recording Metric Events
 
   There may be occasions where you want to record metrics differently or not at all based
   upon metadata. Rather than depending on changing event names with prefixes, you can instead
-  provide a filter predicate function which returns true when you want the metric to be
+  provide a predicate function which returns true when you want the metric to be
   processed for this event and false when you do not.
 
-  Let's examine some a few examples where filtering can be helpful.
+  Let's examine some a few examples where optional recording can be helpful.
 
   ### Filtering on Metadata
 
@@ -262,12 +262,17 @@ defmodule Telemetry.Metrics do
 
   Note: only `:keep` OR `:drop` may be set, never both.
 
+  ### Other Uses
+
+  Another potential use case for `:keep | :drop` could be per metric sampling rates. As long
+  as your function returns a boolean, it can determine if the event should be processed.
+
   ### Reporter Support
 
-  Event filtering must be supported by the reporter you are using. Check your reporter's
+  Event optional recording must be supported by the reporter you are using. Check your reporter's
   documentation before relying on this functionality.
 
-  The `filter` function should be evaluated by reporters _prior_ to `tag_values` using the
+  The `keep` function should be evaluated by reporters _prior_ to `tag_values` using the
   raw `:telemetry.medatadata()` values from the event.
 
   ## Reporters
@@ -571,12 +576,12 @@ defmodule Telemetry.Metrics do
     {event_name, [measurement]} = Enum.split(metric_name, -1)
     {event_name, options} = Keyword.pop(options, :event_name, event_name)
     {measurement, options} = Keyword.pop(options, :measurement, measurement)
-    {keep_filter, options} = Keyword.pop(options, :keep)
-    {drop_filter, options} = Keyword.pop(options, :drop)
-    :ok = validate_event_filter_options!(keep_filter, drop_filter)
-    keep_filter = validate_event_filter!(keep_filter)
-    drop_filter = validate_event_filter!(drop_filter)
-    validate_event_filter_options!(keep_filter, drop_filter)
+    {keep, options} = Keyword.pop(options, :keep)
+    {drop, options} = Keyword.pop(options, :drop)
+    :ok = validate_recording_rule_fun_options!(keep, drop)
+    keep = validate_recording_rule_fun!(keep)
+    drop = validate_recording_rule_fun!(drop)
+    validate_recording_rule_fun_options!(keep, drop)
     event_name = validate_metric_or_event_name!(event_name)
     {unit, options} = Keyword.pop(options, :unit, :unit)
     {unit, conversion_ratio} = validate_unit!(unit)
@@ -590,7 +595,7 @@ defmodule Telemetry.Metrics do
       name: metric_name,
       event_name: event_name,
       measurement: measurement,
-      filter: filter(keep_filter, drop_filter),
+      keep: keep_fun(keep, drop),
       unit: unit
     })
   end
@@ -629,24 +634,24 @@ defmodule Telemetry.Metrics do
           "expected metric name to be a string or a list of atoms, got #{inspect(term)}"
   end
 
-  defp validate_event_filter!(nil), do: nil
-  defp validate_event_filter!(filter) when is_function(filter, 1), do: filter
+  defp validate_recording_rule_fun!(nil), do: nil
+  defp validate_recording_rule_fun!(fun) when is_function(fun, 1), do: fun
 
-  defp validate_event_filter!(term) do
+  defp validate_recording_rule_fun!(term) do
     raise ArgumentError,
-          "expected filter to be a function accepting metadata, got #{inspect(term)}"
+          "expected recording rule to be a function accepting metadata, got #{inspect(term)}"
   end
 
-  def validate_event_filter_options!(keep, drop) when is_nil(keep) or is_nil(drop), do: :ok
+  def validate_recording_rule_fun_options!(keep, drop) when is_nil(keep) or is_nil(drop), do: :ok
 
-  def validate_event_filter_options!(_keep, _drop) do
+  def validate_recording_rule_fun_options!(_keep, _drop) do
     raise ArgumentError,
-          "events can be filtered with the keep or drop option, but not both"
+          "either the keep or drop option may be set, but not both"
   end
 
-  def filter(nil, nil), do: nil
-  def filter(nil, drop), do: drop
-  def filter(keep, nil), do: fn meta -> not keep.(meta) end
+  def keep_fun(nil, nil), do: nil
+  def keep_fun(nil, drop), do: fn meta -> not drop.(meta) end
+  def keep_fun(keep, nil), do: keep
 
   @spec fill_in_default_metric_options([metric_option()]) :: [metric_option()]
   defp fill_in_default_metric_options(options) do
@@ -658,7 +663,7 @@ defmodule Telemetry.Metrics do
     [
       tags: [],
       tag_values: & &1,
-      filter: nil,
+      nil: nil,
       description: nil,
       reporter_options: []
     ]

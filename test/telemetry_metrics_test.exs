@@ -169,15 +169,15 @@ defmodule Telemetry.MetricsTest do
             ] ++ unquote(extra_options)
           ])
 
-        keep_filter_fun = keep_metric.filter
+        keep_filter_fun = keep_metric.keep
 
-        refute keep_filter_fun.(%{repo: :my_app_read_only_repo})
-        assert keep_filter_fun.(%{repo: :my_app_repo})
+        assert keep_filter_fun.(%{repo: :my_app_read_only_repo})
+        refute keep_filter_fun.(%{repo: :my_app_repo})
 
-        drop_filter_fun = drop_metric.filter
+        drop_filter_fun = drop_metric.keep
 
-        assert drop_filter_fun.(%{repo: :my_app_read_only_repo})
-        refute drop_filter_fun.(%{repo: :my_app_repo})
+        refute drop_filter_fun.(%{repo: :my_app_read_only_repo})
+        assert drop_filter_fun.(%{repo: :my_app_repo})
       end
 
       test "setting both keep and drop options raises" do
