@@ -129,7 +129,7 @@ The implementation of `keep?/2` might look like:
 
 ```elixir
 defp keep?(%{keep: nil}, _metadata), do: true
-defp keep?(metric, metadata), do: metric.filter.(metadata)
+defp keep?(metric, metadata), do: metric.keep.(metadata)
 ```
 
 The implementation of `extract_measurement/2` might look as follows:
