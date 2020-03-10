@@ -103,7 +103,7 @@ that means we will no longer listen to any future event. Another option is to re
 error and log them. That's the approach we will take in this example. However, be careful!
 If an event always contains bad data, then we will log an error every time it is emitted;
 
-Let's see a simsple handler implementation that takes all of those four items into account:
+Let's see a simple handler implementation that takes all of those four items into account:
 
 ```elixir
 def handle_event(_event_name, measurements, metadata, metrics) do
