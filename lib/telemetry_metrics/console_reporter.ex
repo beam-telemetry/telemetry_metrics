@@ -97,7 +97,12 @@ defmodule Telemetry.Metrics.ConsoleReporter do
               cond do
                 is_nil(measurement) ->
                   """
-                  No value available (metric skipped)
+                  Measurement value missing (metric skipped)
+                  """
+
+                not keep?(metric, metadata) ->
+                  """
+                  Event dropped
                   """
 
                 metric.__struct__ == Telemetry.Metrics.Counter ->
@@ -119,7 +124,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
                 ])
 
                 """
-                Errored when processing! (metric skipped)
+                Errored when processing (metric skipped - handler may detach!)
                 """
             end
         ]
@@ -127,6 +132,9 @@ defmodule Telemetry.Metrics.ConsoleReporter do
 
     IO.puts(device, [prelude | parts])
   end
+
+  defp keep?(%{keep: nil}, _metadata), do: true
+  defp keep?(metric, metadata), do: metric.keep.(metadata)
 
   defp extract_measurement(metric, measurements) do
     case metric.measurement do

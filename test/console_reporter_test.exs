@@ -9,8 +9,13 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
       last_value("vm.memory.binary", unit: :byte),
       counter("vm.memory.total"),
       summary("http.request.response_time",
-        tag_values: fn %{foo: :bar} -> %{bar: :baz} end,
-        tags: [:bar]
+        tag_values: fn
+          %{foo: :bar} -> %{bar: :baz}
+        end,
+        tags: [:bar],
+        drop: fn metadata ->
+          metadata[:boom] == :pow
+        end
       )
     ]
 
@@ -60,7 +65,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            Tag values: %{}
 
            Metric measurement: :total (counter)
-           No value available (metric skipped)
+           Measurement value missing (metric skipped)
 
            """
   end
@@ -78,6 +83,22 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            Metric measurement: :response_time (summary)
            With value: 1000
            Tag values: %{bar: :baz}
+
+           """
+  end
+
+  test "filters events", %{device: device} do
+    :telemetry.execute([:http, :request], %{response_time: 1000}, %{foo: :bar, boom: :pow})
+    {_in, out} = StringIO.contents(device)
+
+    assert out == """
+           [Telemetry.Metrics.ConsoleReporter] Got new event!
+           Event name: http.request
+           All measurements: %{response_time: 1000}
+           All metadata: %{boom: :pow, foo: :bar}
+
+           Metric measurement: :response_time (summary)
+           Event dropped
 
            """
   end
@@ -100,7 +121,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            All metadata: %{bar: :baz}
 
            Metric measurement: :response_time (summary)
-           Errored when processing! (metric skipped)
+           Errored when processing (metric skipped - handler may detach!)
 
            """
   end

@@ -152,6 +152,46 @@ defmodule Telemetry.MetricsTest do
         assert %{constant: "metadata"} == tag_values_fun.(event_metadata)
       end
 
+      test "setting function as filter returns that function in metric spec" do
+        keep_metric =
+          apply(Metrics, unquote(metric_type), [
+            "my.repo.query",
+            [
+              keep: &match?(%{repo: :my_app_read_only_repo}, &1)
+            ] ++ unquote(extra_options)
+          ])
+
+        drop_metric =
+          apply(Metrics, unquote(metric_type), [
+            "my.repo.query",
+            [
+              drop: &match?(%{repo: :my_app_read_only_repo}, &1)
+            ] ++ unquote(extra_options)
+          ])
+
+        keep_filter_fun = keep_metric.keep
+
+        assert keep_filter_fun.(%{repo: :my_app_read_only_repo})
+        refute keep_filter_fun.(%{repo: :my_app_repo})
+
+        drop_filter_fun = drop_metric.keep
+
+        refute drop_filter_fun.(%{repo: :my_app_read_only_repo})
+        assert drop_filter_fun.(%{repo: :my_app_repo})
+      end
+
+      test "setting both keep and drop options raises" do
+        assert_raise ArgumentError, fn ->
+          apply(Metrics, unquote(metric_type), [
+            "my.event.value",
+            [
+              keep: &match?(%{some: :value}, &1),
+              drop: &match?(%{some: :other_value}, &1)
+            ] ++ unquote(extra_options)
+          ])
+        end
+      end
+
       test "using metric name with leading, trailing or subsequent dots raises" do
         for name <- [".metric.name", "metric.name.", "metric..name"] do
           assert_raise ArgumentError, fn ->
@@ -265,6 +305,17 @@ defmodule Telemetry.MetricsTest do
             ])
           end
         end
+      end
+
+      test "raises when event filter is not a function with an arity of 2" do
+        Enum.each([keep: fn -> true end, drop: fn -> true end], fn filter ->
+          assert_raise ArgumentError, fn ->
+            apply(Metrics, unquote(metric_type), [
+              "ecto.query.queue_time",
+              [filter] ++ unquote(extra_options)
+            ])
+          end
+        end)
       end
 
       test "raises when first element of unit-conversion tuple is not a valid time unit" do
