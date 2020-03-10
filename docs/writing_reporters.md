@@ -87,7 +87,7 @@ When consuming events, there are four steps to take into account:
 
 4. How to react to errors. One option is to let the `handle_event/4` callback fail, but that means we will no longer listen to any future event. Another option is to rescue any error and log them. That's the approach we will take in this example. However, be careful! If an event always contains bad data, then we will log an error every time it is emitted;
 
-Let's see a simsple handler implementation that takes all of those four items into account:
+Let's see a simple handler implementation that takes all of those four items into account:
 
 ```elixir
 def handle_event(_event_name, measurements, metadata, metrics) do
