@@ -365,6 +365,16 @@ defmodule Telemetry.MetricsTest do
         assert metric.measurement.(%{latency: nil}) == nil
       end
 
+      test "does not raise when unit-conversion tuple is provided but measurement is missing" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "http.request.missing_measurement",
+            [unit: {:native, :millisecond}] ++ unquote(extra_options)
+          ])
+
+        assert metric.measurement.(%{}) == nil
+      end
+
       test "raises when unit-conversion tuple is provided but measurement is not a number" do
         metric =
           apply(Metrics, unquote(metric_type), [
