@@ -737,7 +737,7 @@ defmodule Telemetry.Metrics do
       case measurements do
         %{^measurement => nil} -> nil
         %{^measurement => value} -> value * conversion_ratio
-        _ -> nil
+        %{} -> nil
       end
     end
   end
