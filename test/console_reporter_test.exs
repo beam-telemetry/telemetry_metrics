@@ -8,6 +8,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
     metrics = [
       last_value("vm.memory.binary", unit: :byte),
       counter("vm.memory.total"),
+      counter("vm.memory.total", count_by_measurement?: true),
       summary("http.request.response_time",
         tag_values: fn
           %{foo: :bar} -> %{bar: :baz}
@@ -47,6 +48,10 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            Metric measurement: :total (counter)
            Tag values: %{}
 
+           Metric measurement: :total (counter)
+           With value: 200
+           Tag values: %{}
+
            """
   end
 
@@ -63,6 +68,9 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            Metric measurement: :binary (last_value)
            With value: :hundred byte (WARNING! measurement should be a number)
            Tag values: %{}
+
+           Metric measurement: :total (counter)
+           Measurement value missing (metric skipped)
 
            Metric measurement: :total (counter)
            Measurement value missing (metric skipped)

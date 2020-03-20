@@ -105,7 +105,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
                   Event dropped
                   """
 
-                metric.__struct__ == Telemetry.Metrics.Counter ->
+                metric.__struct__ == Telemetry.Metrics.Counter && not metric.count_by_measurement? ->
                   """
                   Tag values: #{inspect(tags)}
                   """

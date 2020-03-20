@@ -548,6 +548,12 @@ defmodule Telemetry.MetricsTest do
     end
   end
 
+  test "counter/2 raises if count_by_measurement? is not a boolean" do
+    assert_raise ArgumentError, fn ->
+      Metrics.counter("http.request.latency", count_by_measurement?: 1)
+    end
+  end
+
   defp converted_unit(measurement, from_unit, to_unit) do
     measurement * conversion_ratio(from_unit, to_unit)
   end

@@ -14,7 +14,8 @@ defmodule Telemetry.Metrics.Counter do
     :keep,
     :description,
     :unit,
-    :reporter_options
+    :reporter_options,
+    {:count_by_measurement?, false}
   ]
 
   @type t :: %__MODULE__{
@@ -26,6 +27,7 @@ defmodule Telemetry.Metrics.Counter do
           keep: (:telemetry.event_metadata() -> boolean()),
           description: Metrics.description(),
           unit: Metrics.unit(),
-          reporter_options: Metrics.reporter_options()
+          reporter_options: Metrics.reporter_options(),
+          count_by_measurement?: boolean()
         }
 end

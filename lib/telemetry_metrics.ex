@@ -412,7 +412,7 @@ defmodule Telemetry.Metrics do
   @type time_unit() :: :second | :millisecond | :microsecond | :nanosecond | :native
   @type byte_unit() :: :megabyte | :kilobyte | :byte
   @type byte_unit_conversion() :: {byte_unit(), byte_unit()}
-  @type counter_options :: [metric_option()]
+  @type counter_options :: [metric_option() | {:count_by_measurement?, boolean()}]
   @type sum_options :: [metric_option()]
   @type last_value_options :: [metric_option()]
   @type summary_options :: [metric_option()]
@@ -444,11 +444,14 @@ defmodule Telemetry.Metrics do
 
   Counter metric keeps track of the total number of specific events emitted.
 
-  Note that for the counter metric it doesn't matter what measurement is selected, as it is
-  ignored by reporters anyway.
+  Note that for the counter metric it doesn't matter what measurement is
+  selected if the `:count_by_measurement?` option is false, as it will then
+  be ignored by reporters anyway. By default `:count_by_measurement?` is set to
+  `false`. If `:count_by_measurement?` is `true` then the measurement value
+   should be used to increment the counter.
 
-  See the "Metrics" section in the top-level documentation of this module for more
-  information.
+  See the "Metrics" section in the top-level documentation of this module for
+  more information.
 
   ## Example
 
@@ -459,7 +462,12 @@ defmodule Telemetry.Metrics do
   """
   @spec counter(metric_name(), counter_options()) :: Counter.t()
   def counter(metric_name, options \\ []) do
-    struct(Counter, common_fields(metric_name, options))
+    fields = common_fields(metric_name, options)
+
+    count_by_measurement? =
+      validate_count_by_measurement!(Keyword.get(options, :count_by_measurement?, false))
+
+    struct(Counter, Map.put(fields, :count_by_measurement?, count_by_measurement?))
   end
 
   @doc """
@@ -808,6 +816,18 @@ defmodule Telemetry.Metrics do
   defp byte_unit?(:kilobyte), do: true
   defp byte_unit?(:megabyte), do: true
   defp byte_unit?(_), do: false
+
+  @spec validate_count_by_measurement!(term()) :: boolean() | no_return()
+  defp validate_count_by_measurement!(count_by_measurement?)
+       when is_boolean(count_by_measurement?),
+       do: count_by_measurement?
+
+  defp validate_count_by_measurement!(count_by_measurement?),
+    do:
+      raise(
+        ArgumentError,
+        "expected count_by_measurement? to be a boolean, got #{inspect(count_by_measurement?)}"
+      )
 
   @spec validate_distribution_buckets!(term()) :: Distribution.buckets() | no_return()
   defp validate_distribution_buckets!([_ | _] = buckets) do
