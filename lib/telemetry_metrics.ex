@@ -189,7 +189,7 @@ defmodule Telemetry.Metrics do
 
   The `:telemetry_poller` package also allows you to run your own poller, which is
   useful to retrieve process information or perform custom measurements periodically.
-  Inside a supervision tree, you could do:
+  For example, to keep track of the number of users, inside a supervision tree, you could do:
 
       measurements = [
         {:process_info,
@@ -205,7 +205,7 @@ defmodule Telemetry.Metrics do
         {:telemetry_poller, measurements: measurements(), period: 10_000}
       ], strategy: :one_for_one)
 
-  Where `MyApp.measure_active_users/0` could be written like this:
+  Where `MyApp.measure_users/0` could be written like this:
 
       defmodule MyApp do
         def measure_users do
@@ -279,7 +279,7 @@ defmodule Telemetry.Metrics do
 
   So far, we have talked about metrics and how to describe them, but we haven't discussed
   how those metrics are consumed and published to a system that provides data visualization,
-  aggregation, and more. The job of subscribing to events and procesing the actual metrics
+  aggregation, and more. The job of subscribing to events and processing the actual metrics
   is a responsibility of reporters.
 
   Generally speaking, a reporter is a process that you would start in your supervision
