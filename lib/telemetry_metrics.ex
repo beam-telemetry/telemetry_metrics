@@ -444,8 +444,9 @@ defmodule Telemetry.Metrics do
 
   Counter metric keeps track of the total number of specific events emitted.
 
-  Note that for the counter metric it doesn't matter what measurement is selected, as it is
-  ignored by reporters anyway.
+  The value of the counter is always incremented by one, regardless of the
+  value of the measurement. However, note the measurement must still be
+  available in the event, otherwise the event is not accounted for.
 
   See the "Metrics" section in the top-level documentation of this module for more
   information.
