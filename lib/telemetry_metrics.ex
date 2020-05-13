@@ -17,10 +17,9 @@ defmodule Telemetry.Metrics do
 
       Telemetry.Metrics.counter("http.request.stop.duration")
 
-  or you could use a distribution metric to see how many queries were completed
-  in particular time buckets:
+  or you could use a summary metric to see statistics about the request duration:
 
-      Telemetry.Metrics.distribution("http.request.stop.duration", buckets: [100, 200, 300])
+      Telemetry.Metrics.summary("http.request.stop.duration")
 
   This documentation is going to cover all the available metrics and how to use
   them, as well as options, and how to integrate those metrics with reporters.
@@ -236,23 +235,21 @@ defmodule Telemetry.Metrics do
   you'd like to monitor the request duration.
 
   You can use the event provided by the library but you have very different acceptable
-  performance requirements for a critical request, so it would be better to provide different
-  bucket sizes and a different metric name for monitoring. The client library includes a user
-  configured `:name` option which you can set and is passed in the event metadata.
+  performance requirements for a critical request, so it would be better to provide a different
+  metric name for monitoring. The client library includes a user configured `:name` option which
+  you can set and is passed in the event metadata.
 
   Let's create a default distribution metric and one for the high performance call.
 
       distribution(
         "http.client.request.duration",
         event: [:http_client, :request, :stop],
-        buckets: [10, 20, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
         drop: &(match?(%{name: :fast_client}, &1))
       )
 
       distribution(
         "http.fast.client.request.duration",
         event: [:http_client, :request, :stop],
-        buckets: [2, 5, 10, 15, 20, 25, 30, 40, 50, 100, 200],
         keep: &(match?(%{name: :fast_client}, &1))
       )
 
@@ -412,14 +409,6 @@ defmodule Telemetry.Metrics do
   @type time_unit() :: :second | :millisecond | :microsecond | :nanosecond | :native
   @type byte_unit() :: :megabyte | :kilobyte | :byte
   @type byte_unit_conversion() :: {byte_unit(), byte_unit()}
-  @type counter_options :: [metric_option()]
-  @type sum_options :: [metric_option()]
-  @type last_value_options :: [metric_option()]
-  @type summary_options :: [metric_option()]
-  @type distribution_options :: [
-          metric_option()
-          | {:buckets, Distribution.buckets() | {Range.t(), step :: non_neg_integer()}}
-        ]
   @type reporter_options :: keyword()
   @type metric_option ::
           {:event_name, :telemetry.event_name()}
@@ -431,6 +420,7 @@ defmodule Telemetry.Metrics do
           | {:description, description()}
           | {:unit, unit() | time_unit_conversion() | byte_unit_conversion()}
           | {:reporter_options, reporter_options()}
+  @type metric_options :: [metric_option()]
 
   @typedoc """
   One of the base metric definitions.
@@ -458,7 +448,7 @@ defmodule Telemetry.Metrics do
         tags: [:controller, :action]
       )
   """
-  @spec counter(metric_name(), counter_options()) :: Counter.t()
+  @spec counter(metric_name(), metric_options()) :: Counter.t()
   def counter(metric_name, options \\ []) do
     struct(Counter, common_fields(metric_name, options))
   end
@@ -480,7 +470,7 @@ defmodule Telemetry.Metrics do
         tags: [:role]
       )
   """
-  @spec sum(metric_name(), sum_options()) :: Sum.t()
+  @spec sum(metric_name(), metric_options()) :: Sum.t()
   def sum(metric_name, options \\ []) do
     struct(Sum, common_fields(metric_name, options))
   end
@@ -500,7 +490,7 @@ defmodule Telemetry.Metrics do
         description: "Total amount of memory allocated by the Erlang VM", unit: :byte
       )
   """
-  @spec last_value(metric_name(), last_value_options()) :: LastValue.t()
+  @spec last_value(metric_name(), metric_options()) :: LastValue.t()
   def last_value(metric_name, options \\ []) do
     struct(LastValue, common_fields(metric_name, options))
   end
@@ -522,7 +512,7 @@ defmodule Telemetry.Metrics do
         unit: {:native, :millisecond}
       )
   """
-  @spec summary(metric_name(), summary_options()) :: Summary.t()
+  @spec summary(metric_name(), metric_options()) :: Summary.t()
   def summary(metric_name, options \\ []) do
     struct(Summary, common_fields(metric_name, options))
   end
@@ -530,19 +520,9 @@ defmodule Telemetry.Metrics do
   @doc """
   Returns a definition of distribution metric.
 
-  Distribution metric builds a histogram of selected measurement's values. Because of that, it is
-  required that you specify the histograms buckets via `:buckets` option.
-
-  The buckets is either a list of integers, such as `[100, 200, 300]`, or a two-element tuple,
-  containing the range as first element and the step as second, such as `{100..300, 100}`, which
-  emits the same buckets as `[100, 200, 300]`.
-
-  Given `buckets: [100, 200, 300]`, the distribution metric produces four values:
-
-    * number of measurements less than or equal to 100
-    * number of measurements greater than 100 and less than or equal to 200
-    * number of measurements greater than 200 and less than or equal to 300
-    * number of measurements greater than 300
+  Distribution metric builds a histogram of selected measurement's values. It is up to the reporter
+  to decide how the boundaries of the distribution buckets are configured - via `:reporter_options`,
+  configuration of the aggregating system, or other means.
 
   See the "Metrics" section in the top-level documentation of this module for more
   information.
@@ -551,22 +531,14 @@ defmodule Telemetry.Metrics do
 
       distribution(
         "http.request.duration",
-        buckets: [100, 200, 300],
-        tags: [:controller, :action],
-      )
-
-      distribution(
-        "http.request.duration",
-        buckets: {100..300, 100},
         tags: [:controller, :action],
       )
 
   """
-  @spec distribution(metric_name(), distribution_options()) :: Distribution.t()
-  def distribution(metric_name, options) do
+  @spec distribution(metric_name(), metric_options()) :: Distribution.t()
+  def distribution(metric_name, options \\ []) do
     fields = common_fields(metric_name, options)
-    buckets = validate_distribution_buckets!(Keyword.fetch!(options, :buckets))
-    struct(Distribution, Map.put(fields, :buckets, buckets))
+    struct(Distribution, fields)
   end
 
   # Helpers
@@ -809,39 +781,4 @@ defmodule Telemetry.Metrics do
   defp byte_unit?(:kilobyte), do: true
   defp byte_unit?(:megabyte), do: true
   defp byte_unit?(_), do: false
-
-  @spec validate_distribution_buckets!(term()) :: Distribution.buckets() | no_return()
-  defp validate_distribution_buckets!([_ | _] = buckets) do
-    unless Enum.all?(buckets, &is_number/1) do
-      raise ArgumentError,
-            "expected buckets list to contain only numbers, got #{inspect(buckets)}"
-    end
-
-    unless buckets == Enum.sort(buckets) do
-      raise ArgumentError, "expected buckets to be ordered ascending, got #{inspect(buckets)}"
-    end
-
-    buckets
-  end
-
-  defp validate_distribution_buckets!({first..last, step} = buckets) when is_integer(step) do
-    if first >= last do
-      raise ArgumentError, "expected buckets range to be ascending, got #{inspect(buckets)}"
-    end
-
-    if rem(last - first, step) != 0 do
-      raise ArgumentError,
-            "expected buckets range first and last to fall within all range steps " <>
-              "(i.e. rem(last - first, step) == 0), got #{inspect(buckets)}"
-    end
-
-    first
-    |> Stream.iterate(&(&1 + step))
-    |> Enum.take_while(&(&1 <= last))
-  end
-
-  defp validate_distribution_buckets!(term) do
-    raise ArgumentError,
-          "expected buckets to be a non-empty list or a {range, step} tuple, got #{inspect(term)}"
-  end
 end

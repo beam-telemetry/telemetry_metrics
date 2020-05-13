@@ -4,69 +4,61 @@ defmodule Telemetry.MetricsTest do
   alias Telemetry.Metrics
 
   # Tests common to all metric types.
-  for {metric_type, extra_options} <- [
-        counter: [],
-        sum: [],
-        last_value: [],
-        summary: [],
-        distribution: [buckets: [0, 100, 200]]
-      ] do
+  for metric_type <- [:counter, :sum, :last_value, :summary, :distribution] do
     describe "#{metric_type}/2" do
       test "raises when metric name is invalid" do
         assert_raise ArgumentError, fn ->
           name = [:my, "event"]
-          options = unquote(extra_options)
-          apply(Metrics, unquote(metric_type), [name, options])
+          apply(Metrics, unquote(metric_type), [name])
         end
       end
 
       test "raises when event name is invalid" do
         assert_raise ArgumentError, fn ->
-          options = [event_name: [:my, "event"]] ++ unquote(extra_options)
+          options = [event_name: [:my, "event"]]
           apply(Metrics, unquote(metric_type), ["my.metric", options])
         end
       end
 
       test "raises when tag_values is invalid" do
         assert_raise ArgumentError, fn ->
-          options = [tag_values: 1] ++ unquote(extra_options)
+          options = [tag_values: 1]
           apply(Metrics, unquote(metric_type), ["my.metric", options])
         end
       end
 
       test "raises when tags are invalid" do
         assert_raise ArgumentError, fn ->
-          options = [tags: 1] ++ unquote(extra_options)
+          options = [tags: 1]
           apply(Metrics, unquote(metric_type), ["my.metric", options])
         end
       end
 
       test "raises when description is invalid" do
         assert_raise ArgumentError, fn ->
-          options = [description: :"metric description"] ++ unquote(extra_options)
+          options = [description: :"metric description"]
           apply(Metrics, unquote(metric_type), ["my.metric", options])
         end
       end
 
       test "raises when unit is invalid" do
         assert_raise ArgumentError, fn ->
-          options = [unit: "second"] ++ unquote(extra_options)
+          options = [unit: "second"]
           apply(Metrics, unquote(metric_type), ["my.metric", options])
         end
       end
 
       test "raises when reporter options is invalid" do
         assert_raise ArgumentError, fn ->
-          options = [reporter_options: [:avg]] ++ unquote(extra_options)
+          options = [reporter_options: [:avg]]
           apply(Metrics, unquote(metric_type), ["my.metric", options])
         end
       end
 
       test "returns #{metric_type} specification with default fields" do
         name = "http.request.latency"
-        options = [] ++ unquote(extra_options)
 
-        metric = apply(Metrics, unquote(metric_type), [name, options])
+        metric = apply(Metrics, unquote(metric_type), [name])
 
         assert [:http, :request] == metric.event_name
         assert [:http, :request, :latency] == metric.name
@@ -98,7 +90,7 @@ defmodule Telemetry.MetricsTest do
             description: description,
             unit: unit,
             reporter_options: reporter_options
-          ] ++ unquote(extra_options)
+          ]
 
         metric = apply(Metrics, unquote(metric_type), [name, options])
 
@@ -119,7 +111,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "http.requests.count",
-            [event_name: "http.request"] ++ unquote(extra_options)
+            [event_name: "http.request"]
           ])
 
         assert [:http, :request] == metric.event_name
@@ -129,8 +121,7 @@ defmodule Telemetry.MetricsTest do
       test "tag_values default returns identity function in metric spec" do
         metric =
           apply(Metrics, unquote(metric_type), [
-            "my.event.value",
-            unquote(extra_options)
+            "my.event.value"
           ])
 
         tag_values_fun = metric.tag_values
@@ -143,7 +134,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "my.event.value",
-            [tag_values: fn _ -> %{constant: "metadata"} end] ++ unquote(extra_options)
+            [tag_values: fn _ -> %{constant: "metadata"} end]
           ])
 
         tag_values_fun = metric.tag_values
@@ -158,7 +149,7 @@ defmodule Telemetry.MetricsTest do
             "my.repo.query",
             [
               keep: &match?(%{repo: :my_app_read_only_repo}, &1)
-            ] ++ unquote(extra_options)
+            ]
           ])
 
         drop_metric =
@@ -166,7 +157,7 @@ defmodule Telemetry.MetricsTest do
             "my.repo.query",
             [
               drop: &match?(%{repo: :my_app_read_only_repo}, &1)
-            ] ++ unquote(extra_options)
+            ]
           ])
 
         keep_filter_fun = keep_metric.keep
@@ -187,7 +178,7 @@ defmodule Telemetry.MetricsTest do
             [
               keep: &match?(%{some: :value}, &1),
               drop: &match?(%{some: :other_value}, &1)
-            ] ++ unquote(extra_options)
+            ]
           ])
         end
       end
@@ -196,8 +187,7 @@ defmodule Telemetry.MetricsTest do
         for name <- [".metric.name", "metric.name.", "metric..name"] do
           assert_raise ArgumentError, fn ->
             apply(Metrics, unquote(metric_type), [
-              name,
-              unquote(extra_options)
+              name
             ])
           end
         end
@@ -208,7 +198,7 @@ defmodule Telemetry.MetricsTest do
           assert_raise ArgumentError, fn ->
             apply(Metrics, unquote(metric_type), [
               "my.metric",
-              [event_name: event_name] ++ unquote(extra_options)
+              [event_name: event_name]
             ])
           end
         end
@@ -222,7 +212,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "my.event:value",
-            [tags: tags, tag_values: tag_values_fun] ++ unquote(extra_options)
+            [tags: tags, tag_values: tag_values_fun]
           ])
 
         tag_values = metric.tag_values.(event_metadata)
@@ -233,7 +223,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             [:my, :event],
-            [measurement: :value] ++ unquote(extra_options)
+            [measurement: :value]
           ])
 
         assert :value == metric.measurement
@@ -243,7 +233,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             [:my, :event],
-            [measurement: fn _ -> 42 end] ++ unquote(extra_options)
+            [measurement: fn _ -> 42 end]
           ])
 
         measurement_fun = metric.measurement
@@ -255,8 +245,7 @@ defmodule Telemetry.MetricsTest do
       test "metric name can be a list of atoms" do
         metric =
           apply(Metrics, unquote(metric_type), [
-            [:my, :event, :value],
-            unquote(extra_options)
+            [:my, :event, :value]
           ])
 
         assert [:my, :event, :value] == metric.name
@@ -267,8 +256,7 @@ defmodule Telemetry.MetricsTest do
       test "metric name can be a string" do
         metric =
           apply(Metrics, unquote(metric_type), [
-            "my.event.value",
-            unquote(extra_options)
+            "my.event.value"
           ])
 
         assert [:my, :event, :value] == metric.name
@@ -280,8 +268,7 @@ defmodule Telemetry.MetricsTest do
         for name <- [[], ""] do
           assert_raise ArgumentError, fn ->
             apply(Metrics, unquote(metric_type), [
-              name,
-              unquote(extra_options)
+              name
             ])
           end
         end
@@ -290,8 +277,7 @@ defmodule Telemetry.MetricsTest do
       test "raises when event name derived from metric name is empty" do
         assert_raise ArgumentError, fn ->
           apply(Metrics, unquote(metric_type), [
-            "latency",
-            unquote(extra_options)
+            "latency"
           ])
         end
       end
@@ -301,7 +287,7 @@ defmodule Telemetry.MetricsTest do
           assert_raise ArgumentError, fn ->
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
-              [event_name: event_name] ++ unquote(extra_options)
+              [event_name: event_name]
             ])
           end
         end
@@ -312,7 +298,7 @@ defmodule Telemetry.MetricsTest do
           assert_raise ArgumentError, fn ->
             apply(Metrics, unquote(metric_type), [
               "ecto.query.queue_time",
-              [filter] ++ unquote(extra_options)
+              [filter]
             ])
           end
         end)
@@ -322,7 +308,7 @@ defmodule Telemetry.MetricsTest do
         assert_raise ArgumentError, fn ->
           apply(Metrics, unquote(metric_type), [
             "http.request.latency",
-            [unit: {:byte, :millisecond}] ++ unquote(extra_options)
+            [unit: {:byte, :millisecond}]
           ])
         end
       end
@@ -331,7 +317,7 @@ defmodule Telemetry.MetricsTest do
         assert_raise ArgumentError, fn ->
           apply(Metrics, unquote(metric_type), [
             "http.request.latency",
-            [unit: {:millisecond, :byte}] ++ unquote(extra_options)
+            [unit: {:millisecond, :byte}]
           ])
         end
       end
@@ -340,7 +326,7 @@ defmodule Telemetry.MetricsTest do
         assert_raise ArgumentError, fn ->
           apply(Metrics, unquote(metric_type), [
             "http.request.latency",
-            [unit: {:native, :millisecond, :nanosecond}] ++ unquote(extra_options)
+            [unit: {:native, :millisecond, :nanosecond}]
           ])
         end
       end
@@ -349,7 +335,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "http.request.latency",
-            [unit: {:native, :millisecond}] ++ unquote(extra_options)
+            [unit: {:native, :millisecond}]
           ])
 
         assert metric.unit == :millisecond
@@ -359,7 +345,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "http.request.latency",
-            [unit: {:native, :millisecond}] ++ unquote(extra_options)
+            [unit: {:native, :millisecond}]
           ])
 
         assert metric.measurement.(%{latency: nil}) == nil
@@ -369,7 +355,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "http.request.missing_measurement",
-            [unit: {:native, :millisecond}] ++ unquote(extra_options)
+            [unit: {:native, :millisecond}]
           ])
 
         assert metric.measurement.(%{}) == nil
@@ -379,7 +365,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "http.request.latency",
-            [unit: {:native, :millisecond}] ++ unquote(extra_options)
+            [unit: {:native, :millisecond}]
           ])
 
         assert_raise ArithmeticError, fn ->
@@ -391,8 +377,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "http.request.latency",
-            [unit: {:native, :millisecond}, measurement: fn _ -> :not_a_number end] ++
-              unquote(extra_options)
+            [unit: {:native, :millisecond}, measurement: fn _ -> :not_a_number end]
           ])
 
         assert_raise ArithmeticError, fn ->
@@ -404,7 +389,7 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "http.request.latency",
-            [unit: :millisecond, measurement: fn _ -> :not_a_number end] ++ unquote(extra_options)
+            [unit: :millisecond, measurement: fn _ -> :not_a_number end]
           ])
 
         assert metric.measurement.(%{latency: 250}) == :not_a_number
@@ -424,7 +409,7 @@ defmodule Telemetry.MetricsTest do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
-              [unit: {unit, unit}] ++ unquote(extra_options)
+              [unit: {unit, unit}]
             ])
 
           refute is_function(metric.measurement)
@@ -443,7 +428,7 @@ defmodule Telemetry.MetricsTest do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
-              [unit: {from, to}] ++ unquote(extra_options)
+              [unit: {from, to}]
             ])
 
           measurements = %{latency: measurement}
@@ -466,7 +451,7 @@ defmodule Telemetry.MetricsTest do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
-              [unit: {from, to}] ++ unquote(extra_options)
+              [unit: {from, to}]
             ])
 
           measurements = %{latency: original}
@@ -483,7 +468,7 @@ defmodule Telemetry.MetricsTest do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
-              [unit: {from, to}, measurement: fn _ -> measurement end] ++ unquote(extra_options)
+              [unit: {from, to}, measurement: fn _ -> measurement end]
             ])
 
           assert metric.measurement.(%{}) == converted_unit(measurement, from, to)
@@ -506,45 +491,12 @@ defmodule Telemetry.MetricsTest do
           metric =
             apply(Metrics, unquote(metric_type), [
               "http.request.latency",
-              [unit: {from, to}, measurement: measurement] ++ unquote(extra_options)
+              [unit: {from, to}, measurement: measurement]
             ])
 
           assert metric.measurement.(%{}) == converted
         end
       end
-    end
-  end
-
-  test "distribution/2 allows {range, step} buckets" do
-    assert Metrics.distribution("http.request.latency", buckets: {100..300, 100}).buckets ==
-             [100, 200, 300]
-
-    assert_raise ArgumentError, fn ->
-      Metrics.distribution("http.request.latency", buckets: {300..100, 100})
-    end
-
-    assert_raise ArgumentError, fn ->
-      Metrics.distribution("http.request.latency", buckets: {100..350, 100})
-    end
-  end
-
-  test "distribution/2 allows list buckets" do
-    assert_raise ArgumentError, fn ->
-      Metrics.distribution("http.request.latency", buckets: [0, 200, 100])
-    end
-
-    assert_raise ArgumentError, fn ->
-      Metrics.distribution("http.request.latency", buckets: [])
-    end
-
-    assert_raise ArgumentError, fn ->
-      Metrics.distribution("http.request.latency", buckets: [0, 100, "200"])
-    end
-  end
-
-  test "distribution/2 raises if bucket boundaries are not provided" do
-    assert_raise KeyError, fn ->
-      Metrics.distribution("http.request.latency", [])
     end
   end
 
