@@ -7,14 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0](https://github.com/beam-telemetry/telemetry_metrics/tree/v0.5.0)
 
+This release brings two new metric options, `:keep` and `:drop`, which allow users to specify
+which telemetry events should be taken into account when collecting metrics. Reporters
+supporting this version of `Telemetry.Metrics` need to respect these filtering rules.
+
+In addition, the requirement to specify the distribution buckets has been dropped, since not
+all reporters require configuration of buckets up front. Reporters which need the buckets to
+be defined on the metric struct should accept it via `:reporter_options`.
+
 ### Added
 
 * `:keep` and `:drop` options to filter events based on metadata
 
 ### Removed
 
-* `:buckets` option on the distribution metric - now it is up to reporters to accept
-  buckets via `:reporter_options` or other means
+* the `:buckets` option on the distribution metric
 
 ## [0.4.2](https://github.com/beam-telemetry/telemetry_metrics/tree/v0.4.2)
 
