@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0](https://github.com/beam-telemetry/telemetry_metrics/tree/v0.5.0)
+
+### Added
+
+* `:keep` and `:drop` options to filter events based on metadata
+
+### Removed
+
+* `:buckets` option on the distribution metric - now it is up to reporters to accept
+  buckets via `:reporter_options` or other means
+
 ## [0.4.2](https://github.com/beam-telemetry/telemetry_metrics/tree/v0.4.2)
 
 ### Fixed
