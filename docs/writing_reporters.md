@@ -109,10 +109,8 @@ Let's see a simple handler implementation that takes all of those four items int
 def handle_event(_event_name, measurements, metadata, metrics) do
   for metric <- metrics do
     try do
-      measurement = extract_measurement(metric, measurements)
-      tags = extract_tags(metric, metadata)
-
-      if keep?(metric, metadata) do
+      if measurement = keep?(metric, metadata) && extract_measurement(metric, measurements) do
+        tags = extract_tags(metric, metadata)
 
         # record and send
       end
@@ -128,8 +126,8 @@ end
 The implementation of `keep?/2` might look like:
 
 ```elixir
-defp keep?(%{keep: nil}, _metadata), do: true
-defp keep?(metric, metadata), do: metric.keep.(metadata)
+defp keep?(%{keep: keep}, metadata) when keep != nil, do: keep.(metadata)
+defp keep?(_metric, _metadata), do: true
 ```
 
 The implementation of `extract_measurement/2` might look as follows:
