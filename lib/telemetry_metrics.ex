@@ -338,7 +338,7 @@ defmodule Telemetry.Metrics do
              measurements: periodic_measurements(),
              period: 10_000},
             # Or TelemetryMetricsPrometheus or TelemetryMetricsFooBar
-            {TelemetryMetricsStatsD, metrics: metrics()}
+            {TelemetryMetricsStatsd, metrics: metrics()}
           ]
 
           Supervisor.init(children, strategy: :one_for_one)
