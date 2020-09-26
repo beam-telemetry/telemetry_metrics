@@ -622,7 +622,7 @@ defmodule Telemetry.Metrics do
           "either the keep or drop option may be set, but not both"
   end
 
-  def keep_fun(nil, nil), do: nil
+  def keep_fun(nil, nil), do: fn _meta -> true end
   def keep_fun(nil, drop), do: fn meta -> not drop.(meta) end
   def keep_fun(keep, nil), do: keep
 
