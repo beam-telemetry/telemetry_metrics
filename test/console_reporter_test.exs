@@ -4,6 +4,10 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
   import Telemetry.Metrics
   import ExUnit.CaptureLog
 
+  def metadata_measurement(_measurements, metadata) do
+    map_size(metadata)
+  end
+
   setup do
     metrics = [
       last_value("vm.memory.binary", unit: :byte),
@@ -16,6 +20,9 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
         drop: fn metadata ->
           metadata[:boom] == :pow
         end
+      ),
+      sum("telemetry.event_size.metadata",
+        measurement: &__MODULE__.metadata_measurement/2
       )
     ]
 
@@ -122,6 +129,23 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
 
            Metric measurement: :response_time (summary)
            Errored when processing (metric skipped - handler may detach!)
+
+           """
+  end
+
+  test "Can use metadata in the event measurement calculation", %{device: device} do
+    :telemetry.execute([:telemetry, :event_size], %{}, %{key: :value})
+    {_in, out} = StringIO.contents(device)
+
+    assert out == """
+           [Telemetry.Metrics.ConsoleReporter] Got new event!
+           Event name: telemetry.event_size
+           All measurements: %{}
+           All metadata: %{key: :value}
+
+           Metric measurement: &Telemetry.Metrics.ConsoleReporterTest.metadata_measurement/2 (sum)
+           With value: 1
+           Tag values: %{}
 
            """
   end

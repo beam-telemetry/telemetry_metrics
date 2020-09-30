@@ -91,7 +91,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
         [
           header
           | try do
-              measurement = extract_measurement(metric, measurements)
+              measurement = extract_measurement(metric, measurements, metadata)
               tags = extract_tags(metric, metadata)
 
               cond do
@@ -136,8 +136,9 @@ defmodule Telemetry.Metrics.ConsoleReporter do
   defp keep?(%{keep: nil}, _metadata), do: true
   defp keep?(metric, metadata), do: metric.keep.(metadata)
 
-  defp extract_measurement(metric, measurements) do
+  defp extract_measurement(metric, measurements, metadata) do
     case metric.measurement do
+      fun when is_function(fun, 2) -> fun.(measurements, metadata)
       fun when is_function(fun, 1) -> fun.(measurements)
       key -> measurements[key]
     end
