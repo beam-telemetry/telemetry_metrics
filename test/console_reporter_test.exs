@@ -133,7 +133,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            """
   end
 
-  test "Can use metadata in the event measurement calculation", %{device: device} do
+  test "can use metadata in the event measurement calculation", %{device: device} do
     :telemetry.execute([:telemetry, :event_size], %{}, %{key: :value})
     {_in, out} = StringIO.contents(device)
 
