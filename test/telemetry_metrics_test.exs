@@ -81,16 +81,15 @@ defmodule Telemetry.MetricsTest do
         unit = :second
         reporter_options = [sample_rate: 0.1]
 
-        options =
-          [
-            event_name: event_name,
-            measurement: measurement,
-            tags: tags,
-            tag_values: tag_values,
-            description: description,
-            unit: unit,
-            reporter_options: reporter_options
-          ]
+        options = [
+          event_name: event_name,
+          measurement: measurement,
+          tags: tags,
+          tag_values: tag_values,
+          description: description,
+          unit: unit,
+          reporter_options: reporter_options
+        ]
 
         metric = apply(Metrics, unquote(metric_type), [name, options])
 
@@ -229,7 +228,7 @@ defmodule Telemetry.MetricsTest do
         assert :value == metric.measurement
       end
 
-      test "setting function as measurement returns that function in metric spec" do
+      test "setting unary function as measurement returns that function in metric spec" do
         metric =
           apply(Metrics, unquote(metric_type), [
             [:my, :event],
@@ -240,6 +239,19 @@ defmodule Telemetry.MetricsTest do
         event_measurements = %{value: 3, other_value: 2}
 
         assert 42 == measurement_fun.(event_measurements)
+      end
+
+      test "setting binary function as measurement returns that function in metric spec" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            [:my, :event],
+            [measurement: fn _measurement, metadata -> length(metadata.messages) end]
+          ])
+
+        measurement_fun = metric.measurement
+        event_measurements = %{value: 3, other_value: 2}
+
+        assert 42 == measurement_fun.(event_measurements, %{messages: List.duplicate("message", 42)})
       end
 
       test "metric name can be a list of atoms" do
@@ -472,6 +484,21 @@ defmodule Telemetry.MetricsTest do
             ])
 
           assert metric.measurement.(%{}) == converted_unit(measurement, from, to)
+        end
+      end
+
+      test "converts a result of binary measurement function from one regular time unit to another" do
+        units = [:native, :second, :millisecond, :microsecond, :nanosecond]
+        measurement = :rand.uniform(10_000_000)
+
+        for from <- units, to <- units, from != to do
+          metric =
+            apply(Metrics, unquote(metric_type), [
+              "http.request.latency",
+              [unit: {from, to}, measurement: fn _measurements, _metadata -> measurement end]
+            ])
+
+          assert metric.measurement.(%{}, %{}) == converted_unit(measurement, from, to)
         end
       end
 

@@ -57,9 +57,13 @@ defmodule Telemetry.Metrics do
       string (e.g. `"http.request"`) or a list of atoms (`[:http, :request]`).
       By default the event name is all but the last segment of the metric name.
     * `:measurement` - the event measurement used as a source of a metric values.
-      By default it is the last segment of the metric name. It can be either an
-      arbitrary term, a key in the event's measurements map, or a function
-      accepting the whole measurements map and returning the actual value to be used.
+      By default it is the last segment of the metric name. It can be:
+      * an arbitrary term
+      * a key in the event's measurements map
+      * an unary function accepting the whole measurements map and returning the
+        actual value to be used.
+      * a binary function accepting the measurements and metadata maps and
+        returning the actual value to be used.
     * `:tags` - a subset of metadata keys by which aggregations will be broken down.
       Defaults to an empty list.
     * `:tag_values` - a function that receives the metadata and returns a map with
@@ -398,7 +402,10 @@ defmodule Telemetry.Metrics do
   """
   @type normalized_metric_name :: [atom(), ...]
 
-  @type measurement :: term() | (:telemetry.event_measurements() -> number())
+  @type measurement ::
+          term()
+          | (:telemetry.event_measurements() -> number())
+          | (:telemetry.event_measurements(), :telemetry.event_metadata() -> number())
   @type tag :: term()
   @type tags :: [tag()]
   @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
@@ -695,6 +702,15 @@ defmodule Telemetry.Metrics do
   defp maybe_convert_measurement(measurement, 1) do
     # Don't wrap measurement if no conversion is required.
     measurement
+  end
+
+  defp maybe_convert_measurement(measurement, conversion_ratio)
+       when is_function(measurement, 2) do
+    fn measurements, metadata ->
+      if measurement = measurement.(measurements, metadata) do
+        measurement * conversion_ratio
+      end
+    end
   end
 
   defp maybe_convert_measurement(measurement, conversion_ratio)
