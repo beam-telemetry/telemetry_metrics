@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/beam-telemetry/telemetry_metrics/tree/v0.6.0)
+
+This release brings an improvement that helps to track metrics based on event's metadata.
+The `:measurement` option now accepts a two-arity function that takes both event measurements
+and metadata, and returns a final measurement to be tracked by the metric.
+
+Starting with this version Telemetry.Metrics requires minimum Elixir  1.7.0.
+
+### Changed
+
+* Extended the `:measurement` option to accept a function taking both event measurements
+  and metadata.
+
 ## [0.5.0](https://github.com/beam-telemetry/telemetry_metrics/tree/v0.5.0)
 
 This release brings two new metric options, `:keep` and `:drop`, which allow users to specify
