@@ -235,7 +235,7 @@ defmodule Telemetry.Metrics do
   ### Filtering on Metadata
 
   Let's assume you are using an HTTP client library in your application which has the following
-  event: `[:http_client, :request, :stop]`. You use this library in multiple places and
+  event_name: `[:http_client, :request, :stop]`. You use this library in multiple places and
   you'd like to monitor the request duration.
 
   You can use the event provided by the library but you have very different acceptable
@@ -247,13 +247,13 @@ defmodule Telemetry.Metrics do
 
       distribution(
         "http.client.request.duration",
-        event: [:http_client, :request, :stop],
+        event_name: [:http_client, :request, :stop],
         drop: &(match?(%{name: :fast_client}, &1))
       )
 
       distribution(
         "http.fast.client.request.duration",
-        event: [:http_client, :request, :stop],
+        event_name: [:http_client, :request, :stop],
         keep: &(match?(%{name: :fast_client}, &1))
       )
 
