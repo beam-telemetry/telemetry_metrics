@@ -196,7 +196,7 @@ defmodule Telemetry.Metrics do
 
       measurements = [
         {:process_info,
-         event_name: [:my_app, :worker],
+         event: [:my_app, :worker],
          name: MyApp.Worker,
          keys: [:message_queue_len, :memory]},
 
