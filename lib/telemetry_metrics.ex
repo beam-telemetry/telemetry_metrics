@@ -419,7 +419,7 @@ defmodule Telemetry.Metrics do
   @type byte_unit_conversion() :: {byte_unit(), byte_unit()}
   @type reporter_options :: keyword()
   @type metric_option ::
-          {:event_name, :telemetry.event_name()}
+          {:event_name, String.t() | :telemetry.event_name()}
           | {:measurement, measurement()}
           | {:tags, tags()}
           | {:tag_values, tag_values()}
