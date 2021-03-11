@@ -1,0 +1,104 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - "main"
+  push:
+    branches:
+      - "main"
+
+jobs:
+  format:
+    name: Check formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-elixir@v1
+        with:
+          otp-version: "23.2"
+          elixir-version: "1.11.3"
+      - uses: actions/cache@v2
+        name: Cache dependencies
+        with:
+          path: |
+            deps
+          key: deps-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            deps-${{ hashFiles('mix.lock') }}
+            deps-
+      - run: mix deps.get
+      - run: mix format --check-formatted
+  test:
+    name: Test on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        otp: ["21.3", "23.2"]
+        elixir: ["1.9.4", "1.11.3"]
+    env:
+      OTP_VERSION: { { matrix.otp } }
+      ELIXIR_VERSION: { { matrix.elixir } }
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-elixir@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+      - uses: actions/cache@v2
+        name: Cache dependencies
+        with:
+          path: |
+            deps
+          key: deps-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            deps-${{ hashFiles('mix.lock') }}
+            deps-
+      - run: mix deps.get
+      - uses: actions/cache@v2
+        name: Cache build
+        with:
+          path: |
+            _build
+          key: build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
+            build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-
+      - run: mix coveralls.json
+      - uses: codecov/codecov-action@v1
+        with:
+          env_vars: ELIXIR_VERSION,OTP_VERSION
+
+  dialyze:
+    name: Dialyze on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        otp: ["21.3", "23.2"]
+        elixir: ["1.9.4", "1.11.3"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-elixir@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+      - uses: actions/cache@v2
+        name: Cache dependencies
+        with:
+          path: |
+            deps
+          key: deps-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            deps-${{ hashFiles('mix.lock') }}
+            deps-
+      - run: mix deps.get
+      - uses: actions/cache@v2
+        name: Cache build
+        with:
+          path: |
+            _build
+          key: build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
+            build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-
+      - run: mix dialyzer --halt-exit-status
