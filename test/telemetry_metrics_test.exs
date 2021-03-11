@@ -251,7 +251,8 @@ defmodule Telemetry.MetricsTest do
         measurement_fun = metric.measurement
         event_measurements = %{value: 3, other_value: 2}
 
-        assert 42 == measurement_fun.(event_measurements, %{messages: List.duplicate("message", 42)})
+        assert 42 ==
+                 measurement_fun.(event_measurements, %{messages: List.duplicate("message", 42)})
       end
 
       test "metric name can be a list of atoms" do
