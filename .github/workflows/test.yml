@@ -37,8 +37,8 @@ jobs:
         otp: ["21.3", "23.2"]
         elixir: ["1.9.4", "1.11.3"]
     env:
-      OTP_VERSION: { { matrix.otp } }
-      ELIXIR_VERSION: { { matrix.elixir } }
+      OTP_VERSION: ${{ matrix.otp }}
+      ELIXIR_VERSION: ${{ matrix.elixir }}
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-elixir@v1
