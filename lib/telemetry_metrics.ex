@@ -446,7 +446,7 @@ defmodule Telemetry.Metrics do
   value of the measurement. However, note the measurement must still be
   available in the event, otherwise the event is not accounted for.
 
-  See the "Metrics" section in the top-level documentation of this module for more
+  See the ["Metrics"](#module-metrics) section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -466,7 +466,7 @@ defmodule Telemetry.Metrics do
 
   Sum metric keeps track of the sum of selected measurement's values carried by specific events.
 
-  See the "Metrics" section in the top-level documentation of this module for more
+  See the ["Metrics"](#module-metrics) section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -488,7 +488,7 @@ defmodule Telemetry.Metrics do
 
   Last value keeps track of the selected measurement found in the most recent event.
 
-  See the "Metrics" section in the top-level documentation of this module for more
+  See the ["Metrics"](#module-metrics) section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -509,7 +509,7 @@ defmodule Telemetry.Metrics do
   This metric aggregates measurement's values into statistics, e.g. minimum and maximum, mean, or
   percentiles. It is up to the reporter to decide which statistics exactly are exposed.
 
-  See the "Metrics" section in the top-level documentation of this module for more
+  See the ["Metrics"](#module-metrics) section in the top-level documentation of this module for more
   information.
 
   ## Example
@@ -532,7 +532,7 @@ defmodule Telemetry.Metrics do
   to decide how the boundaries of the distribution buckets are configured - via `:reporter_options`,
   configuration of the aggregating system, or other means.
 
-  See the "Metrics" section in the top-level documentation of this module for more
+  See the ["Metrics"](#module-metrics) section in the top-level documentation of this module for more
   information.
 
   ## Example
