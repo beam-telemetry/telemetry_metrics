@@ -37,6 +37,14 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
     assert Process.whereis(__MODULE__) == pid
   end
 
+  test "raises when missing :metrics option" do
+    msg = "the :metrics option is required by Telemetry.Metrics.ConsoleReporter"
+
+    assert_raise ArgumentError, msg, fn ->
+      Telemetry.Metrics.ConsoleReporter.start_link(name: __MODULE__)
+    end
+  end
+
   test "prints metrics per event", %{device: device} do
     :telemetry.execute([:vm, :memory], %{binary: 100, total: 200}, %{})
     {_in, out} = StringIO.contents(device)
