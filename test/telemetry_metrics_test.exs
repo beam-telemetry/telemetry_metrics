@@ -287,6 +287,16 @@ defmodule Telemetry.MetricsTest do
         end
       end
 
+      test "raises when metric name is not a string or list of atoms" do
+        for name <- [nil, [nil]] do
+          assert_raise ArgumentError, fn ->
+            apply(Metrics, unquote(metric_type), [
+              name
+            ])
+          end
+        end
+      end
+
       test "raises when event name derived from metric name is empty" do
         assert_raise ArgumentError, fn ->
           apply(Metrics, unquote(metric_type), [
