@@ -290,9 +290,7 @@ defmodule Telemetry.MetricsTest do
       test "raises when metric name is not a string or list of atoms" do
         for name <- [nil, [nil]] do
           assert_raise ArgumentError, fn ->
-            apply(Metrics, unquote(metric_type), [
-              name
-            ])
+            apply(Metrics, unquote(metric_type), [name])
           end
         end
       end
