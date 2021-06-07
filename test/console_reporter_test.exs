@@ -8,6 +8,10 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
     map_size(metadata)
   end
 
+  def measurement(%{duration: duration} = _measurement) do
+    duration
+  end
+
   setup do
     metrics = [
       last_value("vm.memory.binary", unit: :byte),
@@ -23,6 +27,9 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
       ),
       sum("telemetry.event_size.metadata",
         measurement: &__MODULE__.metadata_measurement/2
+      ),
+      distribution("phoenix.endpoint.stop.duration",
+        measurement: &__MODULE__.measurement/1
       )
     ]
 
@@ -153,6 +160,24 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
 
            Metric measurement: &Telemetry.Metrics.ConsoleReporterTest.metadata_measurement/2 (sum)
            With value: 1
+           Tag values: %{}
+
+           """
+  end
+
+  test "can use measurement map in the event measurement calculation", %{device: device} do
+    :telemetry.execute([:phoenix, :endpoint, :stop], %{duration: 100}, %{})
+
+    {_in, out} = StringIO.contents(device)
+
+    assert out == """
+           [Telemetry.Metrics.ConsoleReporter] Got new event!
+           Event name: phoenix.endpoint.stop
+           All measurements: %{duration: 100}
+           All metadata: %{}
+
+           Metric measurement: &Telemetry.Metrics.ConsoleReporterTest.measurement/1 (distribution)
+           With value: 100
            Tag values: %{}
 
            """
