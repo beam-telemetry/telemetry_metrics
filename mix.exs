@@ -1,7 +1,7 @@
 defmodule Telemetry.Metrics.MixProject do
   use Mix.Project
 
-  @version "0.6.0"
+  @version "0.6.1"
 
   def project do
     [
@@ -35,7 +35,7 @@ defmodule Telemetry.Metrics.MixProject do
 
   defp deps do
     [
-      {:telemetry, "~> 0.4"},
+      {:telemetry, "~> 0.4 or ~> 1.0"},
       {:ex_doc, "~> 0.20", only: :docs},
       {:dialyxir, "~> 1.0", only: :test, runtime: false},
       {:excoveralls, "~> 0.10.0", only: :test, runtime: false}
