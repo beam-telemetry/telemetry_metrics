@@ -75,7 +75,7 @@ defmodule Telemetry.Metrics.MixProject do
   defp package do
     [
       maintainers: ["Arkadiusz Gil", "José Valim"],
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/beam-telemetry/telemetry_metrics"}
     ]
   end
