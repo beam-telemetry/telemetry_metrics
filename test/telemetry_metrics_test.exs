@@ -71,7 +71,7 @@ defmodule Telemetry.MetricsTest do
         assert %{key: 1, another_key: 2} == tag_values_fun.(%{key: 1, another_key: 2})
       end
 
-      test "returns #{metric_type} specification with overriden fields" do
+      test "returns #{metric_type} specification with overridden fields" do
         name = "my.metric"
         event_name = [:my, :event]
         measurement = :other_value
