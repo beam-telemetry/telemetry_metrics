@@ -91,7 +91,7 @@ be defined on the metric struct should accept it via `:reporter_options`.
 This release makes the library compatible with Telemetry v0.4.0. This means that metric values are
 now based on one of the measurements. The first argument to all metric definition now specifies
 the metric name, but also the source event name and the measurement - however, both of them can be
-overriden using options.
+overridden using options.
 
 ### Added
 
