@@ -3,7 +3,7 @@ defmodule Telemetry.Metrics do
   Common interface for defining metrics based on
   [`:telemetry`](https://github.com/beam-telemetry/telemetry) events.
 
-  Metrics are aggregations of Telemetry events with specific name, providing
+  Metrics are aggregations of Telemetry events with specific names, providing
   a view of the system's behaviour over time.
 
   To give a more concrete example, imagine that somewhere in your code there is
