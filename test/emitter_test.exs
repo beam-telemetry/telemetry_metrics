@@ -1,8 +1,10 @@
-defmodule Telemetry.Metrics.ConsoleReporterTest do
+defmodule Telemetry.Metrics.EmitterTest do
   use ExUnit.Case, async: false
 
   import Telemetry.Metrics
   import ExUnit.CaptureLog
+
+  alias Telemetry.Metrics.Emitter
 
   def metadata_measurement(_measurements, metadata) do
     map_size(metadata)
@@ -16,6 +18,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
     metrics = [
       last_value("vm.memory.binary", unit: :byte),
       counter("vm.memory.total"),
+      summary("service.request.stop.duration", tags: [:foo]),
       summary("http.request.response_time",
         tag_values: fn
           %{foo: :bar} -> %{bar: :baz}
@@ -25,7 +28,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
           metadata[:boom] == :pow
         end
       ),
-      sum("telemetry.event_size.metadata",
+      sum("telemetry.event.size",
         measurement: &__MODULE__.metadata_measurement/2
       ),
       distribution("phoenix.endpoint.stop.duration",
@@ -53,13 +56,13 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
   end
 
   test "prints metrics per event", %{device: device} do
-    :telemetry.execute([:vm, :memory], %{binary: 100, total: 200}, %{})
+    Emitter.gauge("vm.memory.binary", 100)
     {_in, out} = StringIO.contents(device)
 
     assert out == """
            [Telemetry.Metrics.ConsoleReporter] Got new event!
            Event name: vm.memory
-           All measurements: %{binary: 100, total: 200}
+           All measurements: %{binary: 100}
            All metadata: %{}
 
            Metric measurement: :binary (last_value)
@@ -67,13 +70,13 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            Tag values: %{}
 
            Metric measurement: :total (counter)
-           Tag values: %{}
+           Measurement value missing (metric skipped)
 
            """
   end
 
   test "prints missing and bad measurements", %{device: device} do
-    :telemetry.execute([:vm, :memory], %{binary: :hundred}, %{foo: :bar})
+    Emitter.gauge("vm.memory.binary", :hundred, %{foo: :bar})
     {_in, out} = StringIO.contents(device)
 
     assert out == """
@@ -93,7 +96,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
   end
 
   test "prints tag values measurements", %{device: device} do
-    :telemetry.execute([:http, :request], %{response_time: 1000}, %{foo: :bar})
+    Emitter.measure("http.request.response_time", 1000, %{foo: :bar})
     {_in, out} = StringIO.contents(device)
 
     assert out == """
@@ -109,8 +112,27 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            """
   end
 
+  test "measures function duration", %{device: device} do
+    assert :return ==
+             Emitter.measure("service.request.stop.duration", fn -> :return end, %{foo: :bar})
+
+    {_in, out} = StringIO.contents(device)
+
+    assert out == """
+           [Telemetry.Metrics.ConsoleReporter] Got new event!
+           Event name: service.request.stop
+           All measurements: %{duration: 2000}
+           All metadata: %{foo: :bar}
+
+           Metric measurement: :duration (summary)
+           With value: 2000
+           Tag values: %{foo: :bar}
+
+           """
+  end
+
   test "filters events", %{device: device} do
-    :telemetry.execute([:http, :request], %{response_time: 1000}, %{foo: :bar, boom: :pow})
+    Emitter.measure("http.request.response_time", 1000, %{foo: :bar, boom: :pow})
     {_in, out} = StringIO.contents(device)
 
     assert out == """
@@ -128,7 +150,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
   test "logs bad metrics", %{device: device} do
     log =
       capture_log(fn ->
-        :telemetry.execute([:http, :request], %{response_time: 1000}, %{bar: :baz})
+        Emitter.measure("http.request.response_time", 1000, %{bar: :baz})
       end)
 
     assert log =~ "Could not format metric %Telemetry.Metrics.Summary"
@@ -149,16 +171,16 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
   end
 
   test "can use metadata in the event measurement calculation", %{device: device} do
-    :telemetry.execute([:telemetry, :event_size], %{}, %{key: :value})
+    Emitter.measure("telemetry.event.size", 10, %{key: :value})
     {_in, out} = StringIO.contents(device)
 
     assert out == """
            [Telemetry.Metrics.ConsoleReporter] Got new event!
-           Event name: telemetry.event_size
-           All measurements: %{}
+           Event name: telemetry.event
+           All measurements: %{size: 10}
            All metadata: %{key: :value}
 
-           Metric measurement: &Telemetry.Metrics.ConsoleReporterTest.metadata_measurement/2 (sum)
+           Metric measurement: &Telemetry.Metrics.EmitterTest.metadata_measurement/2 (sum)
            With value: 1
            Tag values: %{}
 
@@ -166,8 +188,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
   end
 
   test "can use measurement map in the event measurement calculation", %{device: device} do
-    :telemetry.execute([:phoenix, :endpoint, :stop], %{duration: 100}, %{})
-
+    Emitter.measure("phoenix.endpoint.stop.duration", 100)
     {_in, out} = StringIO.contents(device)
 
     assert out == """
@@ -176,7 +197,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            All measurements: %{duration: 100}
            All metadata: %{}
 
-           Metric measurement: &Telemetry.Metrics.ConsoleReporterTest.measurement/1 (distribution)
+           Metric measurement: &Telemetry.Metrics.EmitterTest.measurement/1 (distribution)
            With value: 100
            Tag values: %{}
 

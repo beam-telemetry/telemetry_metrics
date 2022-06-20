@@ -1,5 +1,5 @@
 defmodule Telemetry.MetricsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias Telemetry.Metrics
 
