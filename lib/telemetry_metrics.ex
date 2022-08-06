@@ -99,10 +99,10 @@ defmodule Telemetry.Metrics do
   fetched from event metadata - this means that in this example, `[:db, :query]` events
   need to include `:table` and `:operation` keys in their payload:
 
-      :telemetry.execute([:db, :query], %{count: 1}, %{table: "users", operation: "insert"})
-      :telemetry.execute([:db, :query], %{count: 1}, %{table: "users", operation: "select"})
-      :telemetry.execute([:db, :query], %{count: 1}, %{table: "sessions", operation: "insert"})
-      :telemetry.execute([:db, :query], %{count: 1}, %{table: "sessions", operation: "insert"})
+      :telemetry.execute([:db, :query], %{duration: 198}, %{table: "users", operation: "insert"})
+      :telemetry.execute([:db, :query], %{duration: 112}, %{table: "users", operation: "select"})
+      :telemetry.execute([:db, :query], %{duration: 201}, %{table: "sessions", operation: "insert"})
+      :telemetry.execute([:db, :query], %{duration: 212}, %{table: "sessions", operation: "insert"})
 
   The result of aggregating the events above looks like this:
 
