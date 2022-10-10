@@ -622,9 +622,9 @@ defmodule Telemetry.Metrics do
           "expected recording rule to be a function accepting metadata, got #{inspect(term)}"
   end
 
-  def validate_recording_rule_fun_options!(keep, drop) when is_nil(keep) or is_nil(drop), do: :ok
+  defp validate_recording_rule_fun_options!(keep, drop) when is_nil(keep) or is_nil(drop), do: :ok
 
-  def validate_recording_rule_fun_options!(_keep, _drop) do
+  defp validate_recording_rule_fun_options!(_keep, _drop) do
     raise ArgumentError,
           "either the keep or drop option may be set, but not both"
   end
