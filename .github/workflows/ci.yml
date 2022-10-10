@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  mix-test:
+    runs-on: ubuntu-20.04
+
+    name: mix test (OTP ${{matrix.otp}} | Elixir ${{matrix.elixir}})
+
+    env:
+      MIX_ENV: test
+      ELIXIR_VERSION: ${{ matrix.elixir }}
+      OTP_VERSION: ${{ matrix.otp }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: 1.10.4
+            otp: 22.3
+          - elixir: 1.14.0
+            otp: 25.1
+            lint: lint
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            deps
+            _build
+          key: deps-${{ runner.os }}-${{matrix.otp}}-${{matrix.matrix}}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
+
+      - run: mix deps.get
+
+      - run: mix format --check-formatted
+        if: ${{ matrix.lint }}
+
+      - run: mix deps.unlock --check-unused
+        if: ${{ matrix.lint }}
+
+      - run: mix deps.compile
+
+      - run: mix compile --warnings-as-errors
+        if: ${{ matrix.lint }}
+
+      - run: mix dialyzer
+        if: ${{ matrix.lint }}
+
+      - run: mix coveralls.json
+      - uses: codecov/codecov-action@v3
+        with:
+          env_vars: ELIXIR_VERSION,OTP_VERSION

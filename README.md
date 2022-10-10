@@ -1,6 +1,6 @@
 # Telemetry.Metrics
 
-[![Test](https://github.com/beam-telemetry/telemetry_metrics/actions/workflows/test.yml/badge.svg)](https://github.com/beam-telemetry/telemetry_metrics/actions/workflows/test.yml)
+[![CI](https://github.com/beam-telemetry/telemetry_metrics/actions/workflows/ci.yml/badge.svg)](https://github.com/beam-telemetry/telemetry_metrics/actions/workflows/ci.yml)
 [![Codecov](https://codecov.io/gh/beam-telemetry/telemetry_metrics/branch/master/graphs/badge.svg)](https://codecov.io/gh/beam-telemetry/telemetry_metrics/branch/master/graphs/badge.svg)
 
 Telemetry.Metrics provides a common interface for defining metrics based on
