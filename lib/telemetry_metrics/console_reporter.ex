@@ -12,8 +12,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
         counter("vm.memory.total")
       ]
 
-  A console reporter can be started as a child of your your supervision
-  tree as:
+  A console reporter can be started as a child of your supervision tree as:
 
       {Telemetry.Metrics.ConsoleReporter, metrics: metrics}
 
