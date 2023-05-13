@@ -57,7 +57,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
 
     for {event, metrics} <- groups do
       id = {__MODULE__, event, self()}
-      :telemetry.attach(id, event, &handle_event/4, {metrics, device})
+      :telemetry.attach(id, event, &__MODULE__.handle_event/4, {metrics, device})
     end
 
     {:ok, Map.keys(groups)}
@@ -72,7 +72,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
     :ok
   end
 
-  defp handle_event(event_name, measurements, metadata, {metrics, device}) do
+  def handle_event(event_name, measurements, metadata, {metrics, device}) do
     prelude = """
     [#{inspect(__MODULE__)}] Got new event!
     Event name: #{Enum.join(event_name, ".")}
