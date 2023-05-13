@@ -72,6 +72,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
     :ok
   end
 
+  @doc false
   def handle_event(event_name, measurements, metadata, {metrics, device}) do
     prelude = """
     [#{inspect(__MODULE__)}] Got new event!
