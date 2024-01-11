@@ -680,7 +680,7 @@ defmodule Telemetry.Metrics do
 
   @spec validate_description!(term()) :: :ok | no_return()
   defp validate_description!(term) do
-    if String.valid?(term) do
+    if is_binary(term) and String.valid?(term) do
       :ok
     else
       raise ArgumentError, "expected description to be a string, got #{inspect(term)}"

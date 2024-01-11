@@ -117,7 +117,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            [Telemetry.Metrics.ConsoleReporter] Got new event!
            Event name: http.request
            All measurements: %{response_time: 1000}
-           All metadata: %{boom: :pow, foo: :bar}
+           All metadata: #{inspect(%{boom: :pow, foo: :bar})}
 
            Metric measurement: :response_time (summary)
            Event dropped
