@@ -58,7 +58,6 @@ defmodule Telemetry.Metrics do
       By default the event name is all but the last segment of the metric name.
     * `:measurement` - the event measurement used as a source of a metric values.
       By default it is the last segment of the metric name. It can be:
-      * an arbitrary term
       * a key in the event's measurements map
       * an unary function accepting the whole measurements map and returning the
         actual value to be used.

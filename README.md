@@ -12,6 +12,8 @@ can then be published to different backends using our Reporters API. See the
 
 The following reporters are available:
 
+  * [open_telemetry_metrics](https://github.com/open-telemetry/opentelemetry-erlang-contrib/tree/main/utilities/opentelemetry_telemetry_metrics) - reporter for OpenTelemetry
+
   * [peep](https://github.com/rkallos/peep) - reporter for Prometheus and StatsD
 
   * [telemetry_metrics_statsd](https://github.com/beam-telemetry/telemetry_metrics_statsd) - reporter for StatsD
