@@ -85,7 +85,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
       for %struct{} = metric <- metrics do
         header = """
 
-        Metric measurement: #{inspect(metric.measurement)} (#{metric(struct)})
+        Metric measurement: #{measurement_name(metric)} (#{metric(struct)})
         """
 
         [
@@ -131,6 +131,15 @@ defmodule Telemetry.Metrics.ConsoleReporter do
       end
 
     IO.puts(device, [prelude | parts])
+  end
+
+  defp measurement_name(%{measurement: measurement}) when is_atom(measurement),
+    do: inspect(measurement)
+
+  defp measurement_name(%{measurement: fun, name: name}) when is_function(fun) do
+    measurement = List.last(name)
+
+    "#{inspect(measurement)} [via #{inspect(fun)}]"
   end
 
   defp keep?(%{keep: nil}, _metadata), do: true
