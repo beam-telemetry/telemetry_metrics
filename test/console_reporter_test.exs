@@ -184,11 +184,12 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            """
   end
 
-  test "can convert native system time unit", %{device: device, formatter: formatter} do
+  test "can show metric name and unit conversion fun", %{device: device, formatter: formatter} do
     event = [:my_app, :repo, :query]
     native_time = :erlang.system_time()
 
     expected_millisecond = native_time * (1 / System.convert_time_unit(1, :millisecond, :native))
+
     expected_measurement_fun = measurement_fun(event, :query_time, formatter, device)
 
     :telemetry.execute(event, %{query_time: native_time})
