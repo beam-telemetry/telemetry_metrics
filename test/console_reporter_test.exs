@@ -216,7 +216,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
     |> :telemetry.list_handlers()
     |> Enum.find_value(fn
       %{id: {Telemetry.Metrics.ConsoleReporter, ^event, ^formatter}, config: {config, ^device}} ->
-        Enum.find_value(config, fn %{name: ^name, measurement: fun} ->
+        Enum.find_value(config, fn %{name: ^name, measurement: fun} when is_function(fun) ->
           fun
         end)
     end)
