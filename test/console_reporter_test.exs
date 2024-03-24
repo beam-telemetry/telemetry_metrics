@@ -30,7 +30,8 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
       ),
       distribution("phoenix.endpoint.stop.duration",
         measurement: &__MODULE__.measurement/1
-      )
+      ),
+      summary("my_app.repo.query.query_time", unit: {:native, :millisecond})
     ]
 
     {:ok, device} = StringIO.open("")
@@ -158,7 +159,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            All measurements: %{}
            All metadata: %{key: :value}
 
-           Metric measurement: &Telemetry.Metrics.ConsoleReporterTest.metadata_measurement/2 (sum)
+           Metric measurement: :metadata [via &Telemetry.Metrics.ConsoleReporterTest.metadata_measurement/2] (sum)
            With value: 1
            Tag values: %{}
 
@@ -176,10 +177,48 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            All measurements: %{duration: 100}
            All metadata: %{}
 
-           Metric measurement: &Telemetry.Metrics.ConsoleReporterTest.measurement/1 (distribution)
+           Metric measurement: :duration [via &Telemetry.Metrics.ConsoleReporterTest.measurement/1] (distribution)
            With value: 100
            Tag values: %{}
 
            """
+  end
+
+  test "can show metric name and unit conversion fun", %{device: device, formatter: formatter} do
+    event = [:my_app, :repo, :query]
+    native_time = :erlang.system_time()
+
+    expected_millisecond = native_time * (1 / System.convert_time_unit(1, :millisecond, :native))
+
+    expected_measurement_fun = measurement_fun(event, :query_time, formatter, device)
+
+    :telemetry.execute(event, %{query_time: native_time})
+
+    {_in, out} = StringIO.contents(device)
+
+    assert out == """
+           [Telemetry.Metrics.ConsoleReporter] Got new event!
+           Event name: my_app.repo.query
+           All measurements: %{query_time: #{native_time}}
+           All metadata: %{}
+
+           Metric measurement: :query_time [via #{inspect(expected_measurement_fun)}] (summary)
+           With value: #{expected_millisecond} millisecond
+           Tag values: %{}
+
+           """
+  end
+
+  defp measurement_fun(event, measurement, formatter, device) do
+    name = event ++ [measurement]
+
+    event
+    |> :telemetry.list_handlers()
+    |> Enum.find_value(fn
+      %{id: {Telemetry.Metrics.ConsoleReporter, ^event, ^formatter}, config: {config, ^device}} ->
+        Enum.find_value(config, fn %{name: ^name, measurement: fun} when is_function(fun) ->
+          fun
+        end)
+    end)
   end
 end
