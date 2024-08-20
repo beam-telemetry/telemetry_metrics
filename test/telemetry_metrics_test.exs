@@ -146,28 +146,31 @@ defmodule Telemetry.MetricsTest do
         keep_metric =
           apply(Metrics, unquote(metric_type), [
             "my.repo.query",
-            [
-              keep: &match?(%{repo: :my_app_read_only_repo}, &1)
-            ]
+            [keep: &match?(%{repo: :my_app_read_only_repo}, &1)]
           ])
 
         drop_metric =
           apply(Metrics, unquote(metric_type), [
             "my.repo.query",
-            [
-              drop: &match?(%{repo: :my_app_read_only_repo}, &1)
-            ]
+            [drop: &match?(%{repo: :my_app_read_only_repo}, &1)]
           ])
 
-        keep_filter_fun = keep_metric.keep
+        assert keep_metric.keep.(%{repo: :my_app_read_only_repo})
+        refute keep_metric.keep.(%{repo: :my_app_repo})
 
-        assert keep_filter_fun.(%{repo: :my_app_read_only_repo})
-        refute keep_filter_fun.(%{repo: :my_app_repo})
+        refute drop_metric.keep.(%{repo: :my_app_read_only_repo})
+        assert drop_metric.keep.(%{repo: :my_app_repo})
+      end
 
-        drop_filter_fun = drop_metric.keep
+      test "using event filter that evaluates both metadata and measurement" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "my.repo.query",
+            [keep: &(match?(%{repo: :my_app_read_only_repo}, &1) and &2 > 100)]
+          ])
 
-        refute drop_filter_fun.(%{repo: :my_app_read_only_repo})
-        assert drop_filter_fun.(%{repo: :my_app_repo})
+        assert metric.keep.(%{repo: :my_app_read_only_repo}, 200)
+        refute metric.keep.(%{repo: :my_app_read_only_repo}, 50)
       end
 
       test "setting both keep and drop options raises" do
@@ -314,7 +317,7 @@ defmodule Telemetry.MetricsTest do
         end
       end
 
-      test "raises when event filter is not a function with an arity of 2" do
+      test "raises when event filter is not a function with an arity of 1 or 2" do
         Enum.each([keep: fn -> true end, drop: fn -> true end], fn filter ->
           assert_raise ArgumentError, fn ->
             apply(Metrics, unquote(metric_type), [
