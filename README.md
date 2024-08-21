@@ -12,13 +12,13 @@ can then be published to different backends using our Reporters API. See the
 
 The following reporters are available:
 
-  * [open_telemetry_metrics](https://github.com/open-telemetry/opentelemetry-erlang-contrib/tree/main/utilities/opentelemetry_telemetry_metrics) - reporter for OpenTelemetry
-
   * [peep](https://github.com/rkallos/peep) - reporter for Prometheus and StatsD
 
   * [telemetry_metrics_statsd](https://github.com/beam-telemetry/telemetry_metrics_statsd) - reporter for StatsD
 
   * [telemetry_metrics_prometheus](https://github.com/beam-telemetry/telemetry_metrics_prometheus) - reporter for Prometheus
+
+Other libraries are also available to report telemetry events, albeit without using Telemetry.Metrics, such as [OpenTelemetry bindings for telemetry](https://github.com/open-telemetry/opentelemetry-erlang-contrib/tree/main/utilities/opentelemetry_telemetry).
 
 ## Copyright and License
 
