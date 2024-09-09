@@ -410,10 +410,11 @@ defmodule Telemetry.Metrics do
   @type tag :: term()
   @type tags :: [tag()]
   @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
-  @type keep ::
+  @type predicate_fun ::
           (:telemetry.event_metadata() -> boolean())
           | (:telemetry.event_metadata(), :telemetry.event_measurements() -> boolean())
-  @type drop :: (:telemetry.event_metadata() -> boolean())
+  @type keep :: predicate_fun()
+  @type drop :: predicate_fun()
   @type description :: nil | String.t()
   @type unit :: atom()
   @type time_unit_conversion() :: {time_unit(), time_unit()}
