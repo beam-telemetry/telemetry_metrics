@@ -275,7 +275,7 @@ defmodule Telemetry.Metrics do
   documentation before relying on this functionality.
 
   The `keep` function should be evaluated by reporters _prior_ to `tag_values` using the
-  raw `:telemetry.medatadata()` values from the event.
+  raw `:telemetry.metadata()` values from the event.
 
   ## Reporters
 
