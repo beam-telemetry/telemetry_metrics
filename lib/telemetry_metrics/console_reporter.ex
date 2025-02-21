@@ -100,7 +100,7 @@ defmodule Telemetry.Metrics.ConsoleReporter do
                   Measurement value missing (metric skipped)
                   """
 
-                not keep?(metric, metadata, measurements) ->
+                not keep?(metric, metadata, measurement) ->
                   """
                   Event dropped
                   """
@@ -142,11 +142,11 @@ defmodule Telemetry.Metrics.ConsoleReporter do
     "#{inspect(measurement)} [via #{inspect(fun)}]"
   end
 
-  defp keep?(metric, metadata, measurements) do
+  defp keep?(metric, metadata, measurement) do
     case metric do
       %{keep: nil} -> true
       %{keep: keep} when is_function(keep, 1) -> keep.(metadata)
-      %{keep: keep} when is_function(keep, 2) -> keep.(metadata, measurements)
+      %{keep: keep} when is_function(keep, 2) -> keep.(metadata, measurement)
     end
   end
 

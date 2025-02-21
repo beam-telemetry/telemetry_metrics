@@ -25,6 +25,9 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
           metadata[:boom] == :pow
         end
       ),
+      summary("parser.result.size",
+        keep: fn _metadata, measurement -> measurement > 1024 end
+      ),
       sum("telemetry.event_size.metadata",
         measurement: &__MODULE__.metadata_measurement/2
       ),
@@ -110,7 +113,7 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            """
   end
 
-  test "filters events", %{device: device} do
+  test "filters events on metadata", %{device: device} do
     :telemetry.execute([:http, :request], %{response_time: 1000}, %{foo: :bar, boom: :pow})
     {_in, out} = StringIO.contents(device)
 
@@ -122,6 +125,32 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
 
            Metric measurement: :response_time (summary)
            Event dropped
+
+           """
+  end
+
+  test "filters events on measurement", %{device: device} do
+    :telemetry.execute([:parser, :result], %{size: 512})
+    :telemetry.execute([:parser, :result], %{size: 2048})
+    {_in, out} = StringIO.contents(device)
+
+    assert out == """
+           [Telemetry.Metrics.ConsoleReporter] Got new event!
+           Event name: parser.result
+           All measurements: %{size: 512}
+           All metadata: %{}
+
+           Metric measurement: :size (summary)
+           Event dropped
+
+           [Telemetry.Metrics.ConsoleReporter] Got new event!
+           Event name: parser.result
+           All measurements: %{size: 2048}
+           All metadata: %{}
+
+           Metric measurement: :size (summary)
+           With value: 2048
+           Tag values: %{}
 
            """
   end

@@ -412,7 +412,7 @@ defmodule Telemetry.Metrics do
   @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type predicate_fun ::
           (:telemetry.event_metadata() -> boolean())
-          | (:telemetry.event_metadata(), :telemetry.event_measurements() -> boolean())
+          | (:telemetry.event_metadata(), :telemetry.event_value() -> boolean())
   @type keep :: predicate_fun()
   @type drop :: predicate_fun()
   @type description :: nil | String.t()
@@ -623,7 +623,7 @@ defmodule Telemetry.Metrics do
 
   defp validate_recording_rule_fun!(term) do
     raise ArgumentError,
-          "expected recording rule to be a function accepting either metadata or metadata and measurements, got #{inspect(term)}"
+          "expected recording rule to be a function accepting either metadata or metadata and measurement, got #{inspect(term)}"
   end
 
   defp validate_recording_rule_fun_options!(keep, drop) when is_nil(keep) or is_nil(drop), do: :ok
