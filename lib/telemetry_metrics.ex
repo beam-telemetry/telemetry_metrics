@@ -647,7 +647,7 @@ defmodule Telemetry.Metrics do
   defp default_metric_options() do
     [
       tags: [],
-      tag_values: & &1,
+      tag_values: &Function.identity/1,
       nil: nil,
       description: nil,
       reporter_options: []
