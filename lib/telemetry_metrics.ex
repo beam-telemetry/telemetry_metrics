@@ -68,12 +68,12 @@ defmodule Telemetry.Metrics do
     * `:tag_values` - a function that receives the metadata and returns a map with
       the tags as keys and their respective values. Defaults to returning the
       metadata itself.
-    * `:keep` - a predicate function that evaluates the metadata and measurement
-      to conditionally record a given event. `:keep` and `:drop` cannot be
-      combined. Defaults to `nil`.
-    * `:drop` - a predicate function that evaluates the metadata and measurement
-      to conditionally skip recording a given event. `:keep` and `:drop` cannot
-      be combined. Defaults to `nil`.
+    * `:keep` - a predicate function that evaluates the metadata and
+      measurements to conditionally record a given event. `:keep` and `:drop`
+      cannot be combined. Defaults to `nil`.
+    * `:drop` - a predicate function that evaluates the metadata and
+      measurements to conditionally skip recording a given event. `:keep` and
+      `:drop` cannot be combined. Defaults to `nil`.
     * `:description` - human-readable description of the metric. Might be used by
       reporters for documentation purposes. Defaults to `nil`.
     * `:unit` - an atom describing the unit of selected measurement, typically in

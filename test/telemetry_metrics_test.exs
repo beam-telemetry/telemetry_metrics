@@ -166,11 +166,11 @@ defmodule Telemetry.MetricsTest do
         metric =
           apply(Metrics, unquote(metric_type), [
             "my.repo.query",
-            [keep: &(match?(%{repo: :my_app_read_only_repo}, &1) and &2 > 100)]
+            [keep: &(match?(%{repo: :my_app_read_only_repo}, &1) and &2.duration > 100)]
           ])
 
-        assert metric.keep.(%{repo: :my_app_read_only_repo}, 200)
-        refute metric.keep.(%{repo: :my_app_read_only_repo}, 50)
+        assert metric.keep.(%{repo: :my_app_read_only_repo}, %{duration: 200})
+        refute metric.keep.(%{repo: :my_app_read_only_repo}, %{duration: 50})
       end
 
       test "setting both keep and drop options raises" do
