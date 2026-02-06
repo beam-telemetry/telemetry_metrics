@@ -557,7 +557,7 @@ defmodule Telemetry.Metrics do
 
   @spec common_fields(metric_name(), [metric_option() | {atom(), term()}]) :: map()
   defp common_fields(metric_name, options) do
-    metric_name = validate_metric_or_event_name!(metric_name)
+    metric_name = validate_metric_or_event_name!(metric_name, :metric)
     {event_name, [measurement]} = Enum.split(metric_name, -1)
     {event_name, options} = Keyword.pop(options, :event_name, event_name)
     {measurement, options} = Keyword.pop(options, :measurement, measurement)
@@ -566,7 +566,7 @@ defmodule Telemetry.Metrics do
     validate_recording_rule_fun_options!(keep, drop)
     keep = validate_recording_rule_fun!(keep)
     drop = validate_recording_rule_fun!(drop)
-    event_name = validate_metric_or_event_name!(event_name)
+    event_name = validate_metric_or_event_name!(event_name, :event_name)
     {unit, options} = Keyword.pop(options, :unit, :unit)
     {unit, conversion_ratio} = validate_unit!(unit)
     measurement = maybe_convert_measurement(measurement, conversion_ratio)
@@ -584,38 +584,45 @@ defmodule Telemetry.Metrics do
     })
   end
 
-  @spec validate_metric_or_event_name!(term()) :: [atom(), ...]
-  defp validate_metric_or_event_name!(metric_or_event_name)
+  @spec validate_metric_or_event_name!(term(), atom()) :: [atom(), ...]
+  defp validate_metric_or_event_name!(metric_or_event_name, :metric)
        when metric_or_event_name == [] or metric_or_event_name == "" do
-    raise ArgumentError, "metric or event name can't be empty"
+    raise ArgumentError, "metric can't be empty"
   end
 
-  defp validate_metric_or_event_name!(metric_or_event_name) when is_list(metric_or_event_name) do
+  defp validate_metric_or_event_name!(metric_or_event_name, :event_name)
+       when metric_or_event_name == [] or metric_or_event_name == "" do
+    raise ArgumentError,
+          "event_name can't be empty (metric must be namespaced or :event_name explicitly set)"
+  end
+
+  defp validate_metric_or_event_name!(metric_or_event_name, kind)
+       when is_list(metric_or_event_name) do
     if Enum.all?(metric_or_event_name, &is_atom/1) do
       metric_or_event_name
     else
       raise ArgumentError,
-            "expected metric or event name to be a list of atoms or a string, " <>
+            "expected #{kind} to be a list of atoms or a string, " <>
               "got #{inspect(metric_or_event_name)}"
     end
   end
 
-  defp validate_metric_or_event_name!(metric_or_event_name)
+  defp validate_metric_or_event_name!(metric_or_event_name, kind)
        when is_binary(metric_or_event_name) do
     segments = String.split(metric_or_event_name, ".")
 
     if Enum.any?(segments, &(&1 == "")) do
       raise ArgumentError,
-            "metric or event name #{metric_or_event_name} contains leading, " <>
+            "#{kind} #{metric_or_event_name} contains leading, " <>
               "trailing or consecutive dots"
     end
 
     Enum.map(segments, &String.to_atom/1)
   end
 
-  defp validate_metric_or_event_name!(term) do
+  defp validate_metric_or_event_name!(term, kind) do
     raise ArgumentError,
-          "expected metric name to be a string or a list of atoms, got #{inspect(term)}"
+          "expected #{kind} to be a string or a list of atoms, got #{inspect(term)}"
   end
 
   defp validate_recording_rule_fun!(nil), do: nil

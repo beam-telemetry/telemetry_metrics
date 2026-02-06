@@ -299,11 +299,13 @@ defmodule Telemetry.MetricsTest do
       end
 
       test "raises when event name derived from metric name is empty" do
-        assert_raise ArgumentError, fn ->
-          apply(Metrics, unquote(metric_type), [
-            "latency"
-          ])
-        end
+        assert_raise ArgumentError,
+                     "event_name can't be empty (metric must be namespaced or :event_name explicitly set)",
+                     fn ->
+                       apply(Metrics, unquote(metric_type), [
+                         "latency"
+                       ])
+                     end
       end
 
       test "raises when event name is empty" do
