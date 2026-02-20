@@ -408,7 +408,7 @@ defmodule Telemetry.Metrics do
           | (:telemetry.event_measurements() -> number())
           | (:telemetry.event_measurements(), :telemetry.event_metadata() -> number())
   @type tag :: term()
-  @type tags :: [tag()]
+  @type tags :: [tag()] | :all
   @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type predicate_fun ::
           (:telemetry.event_metadata() -> boolean())
@@ -672,6 +672,8 @@ defmodule Telemetry.Metrics do
   end
 
   @spec validate_tags!(term()) :: :ok | no_return()
+  defp validate_tags!(:all), do: :ok
+
   defp validate_tags!(list) when is_list(list) do
     :ok
   end

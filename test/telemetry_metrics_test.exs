@@ -129,6 +129,16 @@ defmodule Telemetry.MetricsTest do
         assert event_metadata == tag_values_fun.(event_metadata)
       end
 
+      test "tags can use atom `:all` to mark that all metadata should be used" do
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "my.event.value",
+            [tags: :all]
+          ])
+
+        assert :all == metric.tags
+      end
+
       test "setting function as tag_values returns that function in metric spec" do
         metric =
           apply(Metrics, unquote(metric_type), [
