@@ -25,6 +25,14 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
           metadata[:boom] == :pow
         end
       ),
+      summary("http.response.network_time",
+        tags: fn
+          %{foo: :bar} -> %{bar: :baz}
+        end,
+        drop: fn metadata ->
+          metadata[:boom] == :pow
+        end
+      ),
       summary("parser.result.size",
         keep: fn _metadata, %{size: size} -> size > 1024 end
       ),
@@ -107,6 +115,23 @@ defmodule Telemetry.Metrics.ConsoleReporterTest do
            All metadata: %{foo: :bar}
 
            Metric measurement: :response_time (summary)
+           With value: 1000
+           Tag values: %{bar: :baz}
+
+           """
+  end
+
+  test "prints tag values measurements altered by tags function", %{device: device} do
+    :telemetry.execute([:http, :response], %{network_time: 1000}, %{foo: :bar})
+    {_in, out} = StringIO.contents(device)
+
+    assert out == """
+           [Telemetry.Metrics.ConsoleReporter] Got new event!
+           Event name: http.response
+           All measurements: %{network_time: 1000}
+           All metadata: %{foo: :bar}
+
+           Metric measurement: :network_time (summary)
            With value: 1000
            Tag values: %{bar: :baz}
 

@@ -64,10 +64,8 @@ defmodule Telemetry.Metrics do
       * a binary function accepting the measurements and metadata maps and
         returning the actual value to be used.
     * `:tags` - a subset of metadata keys by which aggregations will be broken down.
-      Defaults to an empty list.
-    * `:tag_values` - a function that receives the metadata and returns a map with
-      the tags as keys and their respective values. Defaults to returning the
-      metadata itself.
+      Alternatively it can be an unary function that returns new metadata by which
+      aggregation will be broken down. Defaults to an empty list.
     * `:keep` - a predicate function that evaluates the metadata and
       measurements to conditionally record a given event. `:keep` and `:drop`
       cannot be combined. Defaults to `nil`.
@@ -83,6 +81,12 @@ defmodule Telemetry.Metrics do
       conversions are supported. We discuss those in detail in the "Converting Units"
       section.
     * `:reporter_options` - a keyword list of reporter-specific options for the metric.
+
+  ### Deprecated options
+
+    * `:tag_values` - a function that receives the metadata and returns a map with
+      the tags as keys and their respective values. Defaults to returning the
+      metadata itself.
 
   ## Breaking down metric values by tags
 
@@ -408,7 +412,7 @@ defmodule Telemetry.Metrics do
           | (:telemetry.event_measurements() -> number())
           | (:telemetry.event_measurements(), :telemetry.event_metadata() -> number())
   @type tag :: term()
-  @type tags :: [tag()]
+  @type tags :: [tag()] | (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type tag_values :: (:telemetry.event_metadata() -> :telemetry.event_metadata())
   @type predicate_fun ::
           (:telemetry.event_metadata() -> boolean())
@@ -672,6 +676,8 @@ defmodule Telemetry.Metrics do
   end
 
   @spec validate_tags!(term()) :: :ok | no_return()
+  defp validate_tags!(func) when is_function(func, 1), do: :ok
+
   defp validate_tags!(list) when is_list(list) do
     :ok
   end
