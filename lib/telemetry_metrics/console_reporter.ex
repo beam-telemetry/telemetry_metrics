@@ -170,6 +170,10 @@ defmodule Telemetry.Metrics.ConsoleReporter do
   defp metric(Telemetry.Metrics.Sum), do: "sum"
   defp metric(Telemetry.Metrics.Summary), do: "summary"
 
+  defp extract_tags(%{tags: func}, metadata) when is_function(func, 1) do
+    func.(metadata)
+  end
+
   defp extract_tags(metric, metadata) do
     tag_values = metric.tag_values.(metadata)
     Map.take(tag_values, metric.tags)

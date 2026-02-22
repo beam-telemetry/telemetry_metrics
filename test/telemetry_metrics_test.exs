@@ -221,6 +221,21 @@ defmodule Telemetry.MetricsTest do
         refute tags == Map.keys(tag_values)
       end
 
+      test "tags can be function that returns metadata" do
+        tags = fn metadata -> Map.take(metadata, [:action]) end
+        event_metadata = %{controller: UserController, action: :create}
+
+        metric =
+          apply(Metrics, unquote(metric_type), [
+            "my.event:value",
+            [tags: tags]
+          ])
+
+        tag_values = metric.tags.(event_metadata)
+        refute Map.has_key?(tag_values, :controller)
+        assert Map.has_key?(tag_values, :action)
+      end
+
       test "setting term as measurement returns function returning value under that term in metric spec" do
         metric =
           apply(Metrics, unquote(metric_type), [
