@@ -393,7 +393,6 @@ defmodule Telemetry.Metrics do
       end
   """
 
-  require Logger
 
   alias Telemetry.Metrics.{Counter, Sum, LastValue, Summary, Distribution}
 
