@@ -1,7 +1,7 @@
 defmodule Telemetry.Metrics.MixProject do
   use Mix.Project
 
-  @version "1.1.0"
+  @version "1.2.0"
 
   def project do
     [
@@ -10,12 +10,10 @@ defmodule Telemetry.Metrics.MixProject do
       version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      preferred_cli_env: preferred_cli_env(),
       deps: deps(),
       docs: docs(),
       description: description(),
-      package: package(),
-      test_coverage: [tool: ExCoveralls]
+      package: package()
     ]
   end
 
@@ -25,20 +23,10 @@ defmodule Telemetry.Metrics.MixProject do
     ]
   end
 
-  defp preferred_cli_env do
-    [
-      docs: :docs,
-      dialyzer: :test,
-      "coveralls.json": :test
-    ]
-  end
-
   defp deps do
     [
       {:telemetry, "~> 0.4 or ~> 1.0"},
-      {:ex_doc, "~> 0.20", only: :docs},
-      {:dialyxir, "~> 1.0", only: :test, runtime: false},
-      {:excoveralls, "~> 0.14.0", only: :test, runtime: false}
+      {:ex_doc, "~> 0.20", only: :docs}
     ]
   end
 
